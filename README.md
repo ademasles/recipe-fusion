@@ -4,81 +4,79 @@
 
 **Recipe Fusion — Comparing Image–Text Fusion Strategies for Food Recognition**
 
-Classer une recette parmi 101 plats à partir de sa photo et du titre de sa page web.
+Classify a recipe into one of 101 dishes from its photo and the title of its web page.
 
-Projet 1 du cours de deep learning avancé (Mines Nancy) : classification multimodale texte et
-image, avec prétraitement, extraction par modalité, fusion, entraînement et évaluation
-comparative. Les données sont UPMC Food-101 (Wang et al., 2015) : 90 688 paires image et titre
-réparties en 101 classes.
+Project 1 of the Advanced Deep Learning course at Mines Nancy: multimodal text and image
+classification, covering preprocessing, per-modality feature extraction, fusion, training and
+comparative evaluation. The data is UPMC Food-101 (Wang et al., 2015): 90,688 image and title
+pairs across 101 classes.
 
-Le plan de travail est dans [docs/plan.md](docs/plan.md).
+The work plan is in [docs/plan.md](docs/plan.md).
 
-## Démarrage
+## Getting started
 
-Prérequis : Linux, macOS sur puce Apple ou WSL2, avec git, [uv](https://docs.astral.sh/uv/) et
-[just](https://just.systems). Un GPU NVIDIA accélère les calculs ; 8 Go suffisent pour développer.
+Requirements: Linux, macOS on Apple silicon or WSL2, with git, [uv](https://docs.astral.sh/uv/)
+and [just](https://just.systems). An NVIDIA GPU speeds things up; 8 GB is enough for development.
 
 ```bash
-just sync        # crée .venv depuis uv.lock
-just gpu         # vérifie que PyTorch voit le GPU
+just sync        # create .venv from uv.lock
+just gpu         # check that PyTorch sees the GPU
 just check       # ruff + basedpyright + pytest
-just download    # UPMC Food-101 depuis Kaggle (8,3 Go)
-uv run pre-commit install   # une fois après le clone
+just download    # UPMC Food-101 from Kaggle (8.3 GB)
+uv run pre-commit install   # once after cloning
 ```
 
-Pour n'explorer que le texte, `just download data.texts_only=true` récupère les deux fichiers de
-titres (7,6 Mo) en quelques secondes.
+To explore the text alone, `just download data.texts_only=true` fetches the two title files
+(7.6 MB) in a few seconds.
 
-## Installation des outils
+## Installing the tools
 
-Une seule fois par machine, sans droits administrateur. Python n'a pas besoin d'être installé :
-uv télécharge la version fixée dans `.python-version`.
+Once per machine, no admin rights needed. Python does not need to be installed: uv downloads the
+version pinned in `.python-version`.
 
 ```bash
-curl -LsSf https://astral.sh/uv/install.sh | sh   # uv, macOS et Linux
-uv tool install rust-just                         # just, distribué par uv
+curl -LsSf https://astral.sh/uv/install.sh | sh   # uv, macOS and Linux
+uv tool install rust-just                         # just, distributed through uv
 ```
 
-## Organisation
+## Layout
 
-| Chemin | Contenu |
+| Path | Contents |
 |---|---|
-| `src/recipe_fusion/data/` | Index du jeu (`upmc.py`) et téléchargement (`download.py`) |
-| `src/recipe_fusion/seed.py` | Graines et choix du périphérique |
-| `configs/` | Configuration Hydra : chemins, données |
-| `scripts/` | Scripts ponctuels (`gpu_check.py`) |
-| `notebooks/` | Exploration ; `just kernel` enregistre l'environnement dans Jupyter |
+| `src/recipe_fusion/data/` | Dataset index (`upmc.py`) and download (`download.py`) |
+| `src/recipe_fusion/seed.py` | Seeding and device selection |
+| `configs/` | Hydra configuration: paths, data |
+| `scripts/` | One-off scripts (`gpu_check.py`) |
+| `notebooks/` | Exploration; `just kernel` registers the environment with Jupyter |
 | `tests/` | pytest |
-| `docs/` | Plan du projet |
-| `data/`, `outputs/` | Données et sorties d'expériences, ignorées par git |
+| `docs/` | Project plan |
+| `data/`, `outputs/` | Data and experiment outputs, ignored by git |
 
-## Données
+## Data
 
-- Les données vont dans `data/upmc-food101/`. Sur une autre machine,
-  `export F101_DATA_DIR=/chemin/vers/data`.
-- Source : la copie Kaggle `gianmarco96/upmcfood101`, version 1, téléchargée par `kagglehub`
-  sans compte.
-- `texts/{train,test}_titles.csv` : sans en-tête, trois colonnes (fichier image, titre, classe).
-  Images dans `images/{train,test}/<classe>/<fichier>.jpg`.
-- 67 972 paires d'entraînement et 22 716 de test. Il n'y a pas de jeu de validation : il faut
-  le prélever dans l'entraînement.
-- Les titres sont gardés tels quels, entités HTML comprises (`&#8217;`).
+- Data goes to `data/upmc-food101/`. On another machine, `export F101_DATA_DIR=/path/to/data`.
+- Source: the Kaggle copy `gianmarco96/upmcfood101`, version 1, downloaded with `kagglehub`
+  without an account.
+- `texts/{train,test}_titles.csv`: no header, three columns (image file, title, class). Images
+  in `images/{train,test}/<class>/<file>.jpg`.
+- 67,972 training pairs and 22,716 test pairs. There is no validation split: it has to be drawn
+  from the training set.
+- Titles are kept as is, HTML entities included (`&#8217;`).
 
 ## Conventions
 
-- Dépendances : `uv add <paquet>`, outils de développement : `uv add --dev <paquet>`. Jamais
-  `pip install`.
-- PyTorch vient de l'index CUDA déclaré dans `pyproject.toml` sous Linux, de PyPI sur Mac.
-- Toute expérience est seedée et configurée par Hydra.
-- Code sans GPU : `pick_device()`, jamais `"cuda"` en dur, tests sur processeur.
-- Ni données, ni points de contrôle, ni secrets dans git ; `gitleaks` tourne en pre-commit.
-- Code, commentaires et messages de commit en anglais, au format des commits conventionnels.
+- Dependencies: `uv add <package>`, dev tools: `uv add --dev <package>`. Never `pip install`.
+- PyTorch comes from the CUDA index declared in `pyproject.toml` on Linux, from PyPI on macOS.
+- Every experiment is seeded and configured through Hydra.
+- GPU-free code: `pick_device()`, never a hard-coded `"cuda"`, tests run on CPU.
+- No data, checkpoints or secrets in git; `gitleaks` runs as a pre-commit hook.
+- Code, comments and commit messages in English, following Conventional Commits.
 
 ## Licences
 
-Le code est sous licence MIT (voir [LICENSE](LICENSE)).
+The code is released under the MIT licence (see [LICENSE](LICENSE)).
 
-La copie Kaggle d'UPMC Food-101 n'indique pas de licence. Les images et les titres ont été
-collectés sur le web par les auteurs : usage de recherche et d'enseignement seulement, sans
-redistribution. Citer Wang, Kumar, Thome, Cord et Precioso (2015), *Recipe recognition with
-large multimodal food dataset*, ICME Workshops.
+The Kaggle copy of UPMC Food-101 states no licence. The images and titles were collected from
+the web by the dataset authors: research and teaching use only, no redistribution. Cite Wang,
+Kumar, Thome, Cord and Precioso (2015), *Recipe recognition with large multimodal food dataset*,
+ICME Workshops.

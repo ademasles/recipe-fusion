@@ -1,102 +1,98 @@
-# Plan du projet recipe-fusion
+# recipe-fusion project plan
 
-Version du 20 octobre 2026. Ce fichier fixe le cadre et les exigences. Les choix de modèles, de
-fusion et de protocole sont à écrire ici par l'auteur du projet, puis à faire relire **avant**
-de lancer les calculs.
+Version of 20 October 2026. This file sets the frame and the requirements. Model, fusion and
+protocol choices are written here by the project authors, then reviewed **before** any compute is
+launched.
 
-## L'énoncé
+## Assignment
 
-Projet 1 : classification multimodale. Prétraitement, extraction de représentations par
-modalité, fusion, entraînement, évaluation comparative.
+Project 1 of the Advanced Deep Learning course (Mines Nancy): multimodal classification.
+Preprocessing, per-modality feature extraction, fusion, training, comparative evaluation.
 
-Date de rendu, format du rapport, travail seul ou en groupe : **[à compléter]**.
+Deadline, report format, defence: **[TBD]**.
 
-## La tâche
+## Task
 
-Prédire la classe (101 plats) d'une paire (photo, titre de la page web) d'UPMC Food-101
-(Wang et al., 2015). Mesure principale : exactitude top-1 sur le jeu de test officiel
-(22 716 paires) **[à confirmer]**.
+Predict the class (101 dishes) of a (photo, web page title) pair from UPMC Food-101
+(Wang et al., 2015). Main metric: top-1 accuracy on the official test split (22,716 pairs)
+**[to confirm]**.
 
-## Exigences minimales du protocole
+## Minimum protocol requirements
 
-1. **Références unimodales** : un modèle image seule et un modèle texte seul, entraînés et
-   évalués dans les mêmes conditions que les modèles multimodaux.
-2. **Au moins trois stratégies de fusion**, comparées à budget comparable.
-3. **Plusieurs graines** (au moins trois) pour chaque configuration ; rapporter moyenne et
-   écart-type.
-4. **Ablations par modalité** : que devient un modèle multimodal quand on retire ou dégrade une
-   modalité au test ?
-5. **Jeu de validation** prélevé dans l'entraînement, stratifié par classe et figé une fois pour
-   toutes ; le jeu de test ne sert qu'au tableau final.
+1. **Unimodal baselines**: an image-only and a text-only model, trained and evaluated under the
+   same conditions as the multimodal models.
+2. **At least three fusion strategies**, compared at a comparable budget.
+3. **Several seeds** (at least three) per configuration; report mean and standard deviation.
+4. **Modality ablations**: what happens to a multimodal model when one modality is removed or
+   degraded at test time?
+5. **Validation split** drawn from the training set, stratified by class and frozen once and for
+   all; the test split is only used for the final table.
 
-## Faits sur les données qui pèsent sur le plan
+## Data facts that constrain the plan
 
-- Les titres sont courts : 7 mots en médiane, 15 au 95e centile.
-- 73 % des titres contiennent le nom de la classe en toutes lettres (« Apple Pie Recipe »).
-  La référence texte seul sera donc forte, et l'apport de l'image doit être mesuré sur ce fond.
-- 39 % des titres de test se retrouvent à l'identique (en minuscules) dans l'entraînement.
-  Doublons de pages ou titres génériques ? À examiner avant de conclure quoi que ce soit.
-- 14 % des titres contiennent des entités HTML.
+- Titles are short: 7 words median, 15 at the 95th percentile.
+- 73% of titles spell out the class name ("Apple Pie Recipe"). The text-only baseline will be
+  strong, and the contribution of the image has to be measured against it.
+- 39% of test titles (lowercased) appear verbatim in the training set. Duplicate pages or generic
+  titles? To be examined before drawing any conclusion.
+- 14% of titles contain HTML entities.
 
-## À écrire avant de lancer les calculs
+## To write before launching compute
 
-| Point | Choix | Justification |
+| Item | Choice | Rationale |
 |---|---|---|
-| Prétraitement du texte | **[à compléter]** | |
-| Prétraitement des images | **[à compléter]** | |
-| Encodeur image | **[à compléter]** | |
-| Encodeur texte | **[à compléter]** | |
-| Encodeurs gelés ou affinés | **[à compléter]** | |
-| Stratégies de fusion (≥ 3) | **[à compléter]** | |
-| Protocole d'ablation | **[à compléter]** | |
-| Sélection des hyperparamètres | **[à compléter]** | |
-| Mesures et tests statistiques | **[à compléter]** | |
+| Text preprocessing | **[TBD]** | |
+| Image preprocessing | **[TBD]** | |
+| Image encoder | **[TBD]** | |
+| Text encoder | **[TBD]** | |
+| Frozen or fine-tuned encoders | **[TBD]** | |
+| Fusion strategies (≥ 3) | **[TBD]** | |
+| Ablation protocol | **[TBD]** | |
+| Hyperparameter selection | **[TBD]** | |
+| Metrics and statistical tests | **[TBD]** | |
 
-## Répartition (proposition, à valider par le groupe)
+## Team split (proposal, to be agreed by the group)
 
-Même groupe que scene-to-score : `ademasles`, `Argodm`, `OriGiNaLGet9`. La répartition est pensée
-sur les deux projets à la fois : chacun tient un rôle « données et évaluation » dans l'un et un
-rôle « modèle » dans l'autre, et chacun écrit une fusion ici, puisque la fusion est le cœur du
-cours.
+Same group as scene-to-score: `ademasles`, `Argodm`, `OriGiNaLGet9`. The split covers both
+projects at once: everyone holds a "data and evaluation" role in one project and a "model" role in
+the other, and everyone writes one fusion here, since fusion is the core of the course.
 
-| Personne | recipe-fusion (projet 1) | scene-to-score (projet 2) |
+| Member | recipe-fusion (project 1) | scene-to-score (project 2) |
 |---|---|---|
-| ademasles | Données, évaluation et ablations ; fusion intermédiaire (attention croisée) | Encodeurs et extraction ; génération et démo |
-| Argodm **[à confirmer]** | Branche texte et sa référence ; fusion précoce | Données et évaluation |
-| OriGiNaLGet9 **[à confirmer]** | Branche image et sa référence ; fusion tardive | Projection et entraînement |
+| ademasles | Data, evaluation and ablations; intermediate fusion (cross-attention) | Encoders and extraction; generation and demo |
+| Argodm **[to confirm]** | Text branch and its baseline; early fusion | Data and evaluation |
+| OriGiNaLGet9 **[to confirm]** | Image branch and its baseline; late fusion | Projection and training |
 
-Contenu des rôles du projet 1 :
+Project 1 roles:
 
-- **Données, évaluation et ablations** : jeu de validation figé, examen des doublons de titres
-  entre entraînement et test, script d'évaluation commun, lancement à plusieurs graines,
-  ablations par modalité, tableau final.
-- **Branche texte** : prétraitement des titres, encodeur texte, référence texte seul,
-  représentations mises en cache.
-- **Branche image** : prétraitement des images, encodeur image, référence image seule,
-  représentations mises en cache.
-- **Fusions** : chacun conçoit, entraîne et justifie la sienne, sur les représentations en
-  cache et avec le script d'évaluation commun. Les familles ci-dessus sont une proposition ;
-  l'architecture précise revient à chacun.
+- **Data, evaluation and ablations**: frozen validation split, analysis of duplicate titles
+  between train and test, shared evaluation script, multi-seed runs, modality ablations, final
+  table.
+- **Text branch**: title preprocessing, text encoder, text-only baseline, cached features.
+- **Image branch**: image preprocessing, image encoder, image-only baseline, cached features.
+- **Fusions**: each member designs, trains and justifies their own, on the cached features and
+  with the shared evaluation script. The fusion families above are a proposal; the exact
+  architecture is up to each member.
 
-À fixer en premier, avant tout travail en parallèle (rôle données et évaluation) :
+To settle first, before any parallel work (data and evaluation role):
 
-1. Le fichier du jeu de validation, commité.
-2. Le format du cache de représentations : un fichier par modalité et par découpage, lignes dans
-   l'ordre des fichiers de titres, avec les identifiants d'images.
-3. L'interface du script d'évaluation : prédictions en entrée, mesures en sortie.
+1. The validation split file, committed.
+2. The feature cache format: one file per modality and split, rows in the order of the title
+   files, with the image ids.
+3. The evaluation script interface: predictions in, metrics out.
 
-Les deux collaborateurs n'ont pas de GPU NVIDIA. Les encodeurs gelés tournent une fois, au tech
-lab ou sur le portable d'ademasles ; les têtes et les fusions s'entraînent ensuite sur processeur
-à partir du cache. Affiner un encodeur se fait au tech lab.
+Neither collaborator has an NVIDIA GPU. Frozen encoders run once, on the tech lab or on
+ademasles's laptop; heads and fusions then train on CPU from the cache. Encoder fine-tuning runs
+on the tech lab.
 
-## Calcul
+## Compute
 
-Portable : RTX 4070, 8 Go. Ce qui dépasse va au tech lab. Estimation du temps par
-configuration : **[à compléter]** après une première mesure.
+Laptop: RTX 4070, 8 GB. Anything larger goes to the tech lab. Time per configuration: **[TBD]**
+after a first measurement.
 
-## Terminé quand
+## Done when
 
-- Le tableau références unimodales × fusions existe, à trois graines, sur le jeu de test.
-- Les ablations par modalité sont faites.
-- Le dépôt se relance de zéro avec les commandes du README.
-- Le rapport est rendu.
+- The unimodal baselines × fusions table exists, with three seeds, on the test split.
+- Modality ablations are done.
+- The repository runs from scratch with the README commands.
+- The report is submitted.
