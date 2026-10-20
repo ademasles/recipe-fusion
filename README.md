@@ -1,5 +1,7 @@
 # recipe-fusion
 
+[![CI](https://github.com/ademasles/recipe-fusion/actions/workflows/ci.yml/badge.svg)](https://github.com/ademasles/recipe-fusion/actions/workflows/ci.yml)
+
 **Recipe Fusion — Comparing Image–Text Fusion Strategies for Food Recognition**
 
 Classer une recette parmi 101 plats à partir de sa photo et du titre de sa page web.
