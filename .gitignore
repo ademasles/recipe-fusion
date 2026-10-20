@@ -1,0 +1,33 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+dist/
+
+# Experiments: never commit runs, checkpoints or datasets
+/outputs/
+/multirun/
+wandb/
+checkpoints/
+/data/
+*.pt
+*.ckpt
+*.safetensors
+
+# Notebooks
+.ipynb_checkpoints/
+
+# Secrets and local overrides
+.env
+.env.*
+!.env.example
+.envrc
+
+# Editors / OS
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+.DS_Store

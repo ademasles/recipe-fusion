@@ -1,0 +1,8 @@
+defaults:
+  - paths: default
+  - data: upmc_food101
+  - _self_
+
+hydra:
+  run:
+    dir: outputs/download/${now:%Y-%m-%d}/${now:%H-%M-%S}

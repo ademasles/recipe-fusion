@@ -1,0 +1,5 @@
+# Where data lives. Override per machine with the F101_DATA_DIR environment variable
+# (e.g. on the tech lab: export F101_DATA_DIR=/scratch/$USER/food101-multimodal).
+data_dir: ${oc.env:F101_DATA_DIR,data}
+upmc_dir: ${paths.data_dir}/upmc-food101
+features_dir: ${paths.data_dir}/features

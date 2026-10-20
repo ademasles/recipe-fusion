@@ -1,0 +1,7 @@
+# UPMC Food-101 (Wang et al., 2015): 90,688 image + web page title pairs, 101 classes.
+# Kaggle copy: https://www.kaggle.com/datasets/gianmarco96/upmcfood101 (licence "Unknown").
+kaggle_handle: gianmarco96/upmcfood101
+version: 1   # the only version, uploaded on 2020-10-12
+
+# true downloads only texts/{train,test}_titles.csv (7.6 MB) instead of the 8.3 GB archive.
+texts_only: false
