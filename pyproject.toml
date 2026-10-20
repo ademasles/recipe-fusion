@@ -1,5 +1,5 @@
 [project]
-name = "food101-multimodal"
+name = "recipe-fusion"
 version = "0.1.0"
 description = "Multimodal (image + text) recipe classification on UPMC Food-101."
 readme = "README.md"

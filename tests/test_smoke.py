@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 from hydra import compose, initialize_config_dir
 
-from food101_multimodal.data import download as download_module
+from recipe_fusion.data import download as download_module
 
 CONFIGS = Path(__file__).resolve().parents[1] / "configs"
 

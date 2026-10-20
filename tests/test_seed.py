@@ -1,6 +1,6 @@
 import torch
 
-from food101_multimodal.seed import pick_device, seed_everything
+from recipe_fusion.seed import pick_device, seed_everything
 
 
 def test_seed_makes_torch_reproducible() -> None:

@@ -1,4 +1,4 @@
-# Plan du projet food101-multimodal
+# Plan du projet recipe-fusion
 
 Version du 20 octobre 2026. Ce fichier fixe le cadre et les exigences. Les choix de modèles, de
 fusion et de protocole sont à écrire ici par l'auteur du projet, puis à faire relire **avant**

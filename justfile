@@ -28,9 +28,9 @@ gpu:
 
 # Register this project's venv as a Jupyter kernel
 kernel:
-    uv run python -m ipykernel install --user --name food101-multimodal
+    uv run python -m ipykernel install --user --name recipe-fusion
 
 # Download UPMC Food-101 from Kaggle (8.3 GB); Hydra overrides go after the recipe name,
 # e.g. `just download data.texts_only=true`
 download *ARGS:
-    uv run python -m food101_multimodal.data.download {{ARGS}}
+    uv run python -m recipe_fusion.data.download {{ARGS}}

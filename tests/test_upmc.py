@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from food101_multimodal.data.upmc import (
+from recipe_fusion.data.upmc import (
     class_names,
     missing_images,
     read_split,

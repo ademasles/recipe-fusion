@@ -1,4 +1,6 @@
-# food101-multimodal
+# recipe-fusion
+
+**Recipe Fusion — Comparing Image–Text Fusion Strategies for Food Recognition**
 
 Classer une recette parmi 101 plats à partir de sa photo et du titre de sa page web.
 
@@ -39,8 +41,8 @@ uv tool install rust-just                         # just, distribué par uv
 
 | Chemin | Contenu |
 |---|---|
-| `src/food101_multimodal/data/` | Index du jeu (`upmc.py`) et téléchargement (`download.py`) |
-| `src/food101_multimodal/seed.py` | Graines et choix du périphérique |
+| `src/recipe_fusion/data/` | Index du jeu (`upmc.py`) et téléchargement (`download.py`) |
+| `src/recipe_fusion/seed.py` | Graines et choix du périphérique |
 | `configs/` | Configuration Hydra : chemins, données |
 | `scripts/` | Scripts ponctuels (`gpu_check.py`) |
 | `notebooks/` | Exploration ; `just kernel` enregistre l'environnement dans Jupyter |

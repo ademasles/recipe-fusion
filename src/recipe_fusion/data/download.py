@@ -11,7 +11,7 @@ import hydra
 import kagglehub
 from omegaconf import DictConfig
 
-from food101_multimodal.data.upmc import SPLITS, missing_images, read_split, summary
+from recipe_fusion.data.upmc import SPLITS, missing_images, read_split, summary
 
 log = logging.getLogger(__name__)
 
