@@ -52,6 +52,43 @@ Prédire la classe (101 plats) d'une paire (photo, titre de la page web) d'UPMC 
 | Sélection des hyperparamètres | **[à compléter]** | |
 | Mesures et tests statistiques | **[à compléter]** | |
 
+## Répartition (proposition, à valider par le groupe)
+
+Même groupe que scene-to-score : `ademasles`, `Argodm`, `OriGiNaLGet9`. La répartition est pensée
+sur les deux projets à la fois : chacun tient un rôle « données et évaluation » dans l'un et un
+rôle « modèle » dans l'autre, et chacun écrit une fusion ici, puisque la fusion est le cœur du
+cours.
+
+| Personne | recipe-fusion (projet 1) | scene-to-score (projet 2) |
+|---|---|---|
+| ademasles | Données, évaluation et ablations ; fusion intermédiaire (attention croisée) | Encodeurs et extraction ; génération et démo |
+| Argodm **[à confirmer]** | Branche texte et sa référence ; fusion précoce | Données et évaluation |
+| OriGiNaLGet9 **[à confirmer]** | Branche image et sa référence ; fusion tardive | Projection et entraînement |
+
+Contenu des rôles du projet 1 :
+
+- **Données, évaluation et ablations** : jeu de validation figé, examen des doublons de titres
+  entre entraînement et test, script d'évaluation commun, lancement à plusieurs graines,
+  ablations par modalité, tableau final.
+- **Branche texte** : prétraitement des titres, encodeur texte, référence texte seul,
+  représentations mises en cache.
+- **Branche image** : prétraitement des images, encodeur image, référence image seule,
+  représentations mises en cache.
+- **Fusions** : chacun conçoit, entraîne et justifie la sienne, sur les représentations en
+  cache et avec le script d'évaluation commun. Les familles ci-dessus sont une proposition ;
+  l'architecture précise revient à chacun.
+
+À fixer en premier, avant tout travail en parallèle (rôle données et évaluation) :
+
+1. Le fichier du jeu de validation, commité.
+2. Le format du cache de représentations : un fichier par modalité et par découpage, lignes dans
+   l'ordre des fichiers de titres, avec les identifiants d'images.
+3. L'interface du script d'évaluation : prédictions en entrée, mesures en sortie.
+
+Les deux collaborateurs n'ont pas de GPU NVIDIA. Les encodeurs gelés tournent une fois, au tech
+lab ou sur le portable d'ademasles ; les têtes et les fusions s'entraînent ensuite sur processeur
+à partir du cache. Affiner un encodeur se fait au tech lab.
+
 ## Calcul
 
 Portable : RTX 4070, 8 Go. Ce qui dépasse va au tech lab. Estimation du temps par
