@@ -1,0 +1,6 @@
+root: data/upmc-food101
+model_name: bert-base-uncased
+batch_size: 256
+length_percentile: 99   # L = next power of two above the train p99 of WordPiece lengths
+max_len: null           # null = measured; only force it knowingly
+out_dir: data/features/text/bert-base-uncased
