@@ -37,3 +37,7 @@ kernel:
 # e.g. `just download data.texts_only=true`
 download *ARGS:
     uv run python -m recipe_fusion.data.download {{ARGS}}
+
+# Draw the validation split once (splits/val_ids.txt, committed); needs the title files
+make-split *ARGS:
+    uv run python -m recipe_fusion.data.split {{ARGS}}
