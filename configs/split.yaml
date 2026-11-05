@@ -1,0 +1,14 @@
+defaults:
+  - paths: default
+  - data: upmc_food101
+  - _self_
+
+split:
+  frac: 0.1
+  seed: 0
+  # Committed to git; relative to the repository root.
+  val_ids: splits/val_ids.txt
+
+hydra:
+  run:
+    dir: outputs/split/${now:%Y-%m-%d}/${now:%H-%M-%S}
