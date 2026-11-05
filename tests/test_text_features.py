@@ -1,4 +1,3 @@
-import json
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -9,6 +8,7 @@ from hydra import compose, initialize_config_dir
 from transformers import BertConfig, BertModel, BertTokenizer
 
 from recipe_fusion.features import text as T
+from recipe_fusion.features.cache import read_features
 
 CONFIG_DIR = Path(__file__).resolve().parents[1] / "configs" / "features"
 VOCAB = [
@@ -88,29 +88,6 @@ def test_residual_escape_pct():
     assert T.residual_escape_pct(["ok", "Mom&rsquo;s", "a \\xe2 b", "fine"]) == 50.0
 
 
-@pytest.mark.parametrize("case", ["nan", "inf", "empty_mask_row"])
-def test_check_outputs_rejects_invalid(case):
-    pooled = np.zeros((2, 4), dtype=np.float16)
-    tokens = np.zeros((2, 3, 4), dtype=np.float16)
-    mask = np.ones((2, 3), dtype=np.bool_)
-    if case == "nan":
-        pooled[0, 0] = np.nan
-    elif case == "inf":
-        tokens[1, 0, 0] = np.inf
-    else:
-        mask[1] = False
-    with pytest.raises(ValueError):
-        T.check_outputs(pooled, tokens, mask)
-
-
-def test_check_outputs_accepts_valid():
-    T.check_outputs(
-        np.zeros((2, 4), dtype=np.float16),
-        np.zeros((2, 3, 4), dtype=np.float16),
-        np.ones((2, 3), dtype=np.bool_),
-    )
-
-
 def test_git_commit_returns_string():
     assert isinstance(T.git_commit(), str)
 
@@ -139,19 +116,16 @@ def test_run_from_composed_hydra_config(tmp_path, tokenizer, model, monkeypatch)
         cfg = compose(config_name="text", overrides=[f"out_dir={out}", "batch_size=2"])
     assert cfg.model_name == "bert-base-uncased"  # defaults come from text.yaml
 
-    meta = T.run(Path(cfg.root), cfg, tokenizer, model)
+    metas = T.run(Path(cfg.root), cfg, tokenizer, model)
 
     for split in ("train", "test"):
-        ids = (out / f"{split}_ids.txt").read_text(encoding="utf-8").splitlines()
-        assert ids == [s.image_name for s in fake[split]]
-        pooled = np.load(out / f"{split}_pooled.npy")
-        tokens = np.load(out / f"{split}_tokens.npy")
-        mask = np.load(out / f"{split}_mask.npy")
-        assert pooled.shape == (len(ids), 32) and pooled.dtype == np.float16
-        assert tokens.shape == (len(ids), meta["L"], 32) and tokens.dtype == np.float16
-        assert mask.shape == tokens.shape[:2] and mask.dtype == np.bool_
-    saved = json.loads((out / "meta.json").read_text())
-    assert saved["extraction_seconds"] >= 0
-    assert saved["d"] == 32
-    assert saved["L"] & (saved["L"] - 1) == 0  # power of two
-    assert "git_commit" in saved and "truncated_pct" in saved["splits"]["train"]
+        features = read_features(out, split, mmap=False)  # validated by write_features
+        assert features.ids == [s.image_name for s in fake[split]]
+        assert features.pooled.shape == (len(features), 32)
+        assert features.tokens is not None and features.mask is not None
+        assert features.tokens.shape == (len(features), metas[split]["L"], 32)
+        meta = features.meta
+        assert meta["extraction_seconds"] >= 0
+        assert meta["d"] == 32
+        assert meta["L"] & (meta["L"] - 1) == 0  # power of two
+        assert "git_commit" in meta and "truncated_pct" in meta

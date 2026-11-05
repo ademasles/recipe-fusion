@@ -24,6 +24,7 @@ from tqdm import tqdm
 from transformers import AutoModel, AutoTokenizer
 
 from recipe_fusion.data.upmc import read_split
+from recipe_fusion.features.cache import write_features
 from recipe_fusion.seed import pick_device
 
 SPLITS = ("train", "test")  # train first, then test; file order, no shuffling
@@ -133,11 +134,12 @@ def run(
     tokenizer,
     model,
     device_name: str = "cpu",
-) -> dict:
-    """Full computation, without loading any model (testable on CPU)."""
-    t0 = time.perf_counter()
+) -> dict[str, dict[str, Any]]:
+    """Full computation, without loading any model (testable on CPU).
+
+    Returns the metadata written for each split.
+    """
     out_dir = Path(cfg["out_dir"])
-    out_dir.mkdir(parents=True, exist_ok=True)
 
     samples = {s: list(read_split(root, s)) for s in SPLITS}
     texts = {s: [preprocess(x.text) for x in samples[s]] for s in SPLITS}
@@ -146,8 +148,9 @@ def run(
     pct = float(cfg["length_percentile"])
     p_val = float(np.percentile(lengths["train"], pct))
     max_len = int(cfg.get("max_len") or next_pow2(p_val))
+    batch_size = int(cfg["batch_size"])
 
-    meta: dict[str, Any] = {
+    common: dict[str, Any] = {
         "encoder": cfg["model_name"],
         "weights_revision": getattr(model.config, "_commit_hash", None),
         "d": int(model.config.hidden_size),
@@ -156,31 +159,28 @@ def run(
         "train_length_at_percentile": p_val,
         "preprocessing": "html.unescape(title).strip()",
         "pooling": "masked mean of last_hidden_state, [CLS]/[SEP] included",
-        "batch_size": int(cfg["batch_size"]),
+        "batch_size": batch_size,
         "dtype": "float16",
         "git_commit": git_commit(),
         "device": device_name,
         "torch": torch.__version__,
         "transformers": transformers.__version__,
-        "splits": {},
     }
 
+    metas: dict[str, dict[str, Any]] = {}
     for s in SPLITS:
-        ts = time.perf_counter()
-        pooled, tokens, mask = encode(texts[s], tokenizer, model, max_len, meta["batch_size"])
-        check_outputs(pooled, tokens, mask)
-        ids = [x.image_name for x in samples[s]]
-        write_split(out_dir, s, ids, pooled, tokens, mask)
-        meta["splits"][s] = {
-            "n": len(ids),
+        t0 = time.perf_counter()
+        pooled, tokens, mask = encode(texts[s], tokenizer, model, max_len, batch_size)
+        metas[s] = {
+            **common,
+            "n": len(samples[s]),
             "truncated_pct": truncated_pct(lengths[s], max_len),
             "residual_escape_pct": residual_escape_pct(texts[s]),
-            "seconds": round(time.perf_counter() - ts, 2),
+            "extraction_seconds": round(time.perf_counter() - t0, 2),
         }
-
-    meta["extraction_seconds"] = round(time.perf_counter() - t0, 2)
-    (out_dir / "meta.json").write_text(json.dumps(meta, indent=2), encoding="utf-8")
-    return meta
+        ids = [x.image_name for x in samples[s]]
+        write_features(out_dir, s, ids, pooled, tokens, mask, meta=metas[s])
+    return metas
 
 
 @hydra.main(version_base=None, config_path="../../../configs/features", config_name="text")
