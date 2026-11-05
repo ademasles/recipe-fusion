@@ -19,6 +19,7 @@ import hydra
 import numpy as np
 import torch
 import transformers
+from huggingface_hub import hf_hub_download
 from omegaconf import DictConfig
 from tqdm import tqdm
 from transformers import AutoModel, AutoTokenizer
@@ -128,12 +129,26 @@ def load_model(model_name: str, device):
     return tokenizer, model
 
 
+def resolve_revision(model_name: str) -> str | None:
+    """Exact Hub revision of the weights, read from the local HF cache.
+
+    The snapshot directory is named after the commit hash. Returns None for a
+    local checkpoint (no hub revision).
+    """
+    try:
+        config_path = hf_hub_download(model_name, "config.json")
+    except Exception:
+        return None
+    return Path(config_path).parent.name
+
+
 def run(
     root: Path,
     cfg: Mapping[str, Any],
     tokenizer,
     model,
     device_name: str = "cpu",
+    revision: str | None = None,
 ) -> dict[str, dict[str, Any]]:
     """Full computation, without loading any model (testable on CPU).
 
@@ -152,7 +167,7 @@ def run(
 
     common: dict[str, Any] = {
         "encoder": cfg["model_name"],
-        "weights_revision": getattr(model.config, "_commit_hash", None),
+        "weights_revision": revision,
         "d": int(model.config.hidden_size),
         "L": max_len,
         "length_percentile": pct,
@@ -188,7 +203,8 @@ def main(cfg: DictConfig) -> None:
     device = pick_device()
     print(f"device={device}", flush=True)
     tokenizer, model = load_model(cfg.model_name, device)
-    meta = run(Path(cfg.root), cfg, tokenizer, model, str(device))
+    revision = resolve_revision(cfg.model_name)
+    meta = run(Path(cfg.root), cfg, tokenizer, model, str(device), revision)
     print(json.dumps(meta, indent=2))
 
 

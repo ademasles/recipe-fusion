@@ -92,6 +92,10 @@ def test_git_commit_returns_string():
     assert isinstance(T.git_commit(), str)
 
 
+def test_resolve_revision_is_none_for_local_path(tmp_path):
+    assert T.resolve_revision(str(tmp_path)) is None
+
+
 def test_load_model_is_frozen_and_eval(tmp_path, tokenizer, model):
     model.save_pretrained(tmp_path / "ckpt")
     tokenizer.save_pretrained(tmp_path / "ckpt")
@@ -116,7 +120,7 @@ def test_run_from_composed_hydra_config(tmp_path, tokenizer, model, monkeypatch)
         cfg = compose(config_name="text", overrides=[f"out_dir={out}", "batch_size=2"])
     assert cfg.model_name == "bert-base-uncased"  # defaults come from text.yaml
 
-    metas = T.run(Path(cfg.root), cfg, tokenizer, model)
+    metas = T.run(Path(cfg.root), cfg, tokenizer, model, revision="abc123")
 
     for split in ("train", "test"):
         features = read_features(out, split, mmap=False)  # validated by write_features
@@ -126,6 +130,7 @@ def test_run_from_composed_hydra_config(tmp_path, tokenizer, model, monkeypatch)
         assert features.tokens.shape == (len(features), metas[split]["L"], 32)
         meta = features.meta
         assert meta["extraction_seconds"] >= 0
+        assert meta["weights_revision"] == "abc123"
         assert meta["d"] == 32
         assert meta["L"] & (meta["L"] - 1) == 0  # power of two
         assert "git_commit" in meta and "truncated_pct" in meta
