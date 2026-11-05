@@ -19,8 +19,8 @@ fmt:
 typecheck:
     uv run basedpyright
 
-extract-text:
-    uv run text.py
+extract-text root="data/upmc-food101" *overrides:
+    uv run python -m recipe_fusion.features.text root={{root}} {{overrides}}
 
 # All checks run before a commit or a PR
 check: lint typecheck test
