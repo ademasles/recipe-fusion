@@ -38,3 +38,7 @@ download *ARGS:
 # Draw the validation split once (splits/val_ids.txt, committed); needs the title files
 make-split *ARGS:
     uv run python -m recipe_fusion.data.split {{ARGS}}
+
+# Score every prediction file with the shared metrics; `just evaluate split=test` for the final table
+evaluate *ARGS:
+    uv run python -m recipe_fusion.evaluate {{ARGS}}
