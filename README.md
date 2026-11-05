@@ -44,6 +44,7 @@ uv tool install rust-just                         # just, distributed through uv
 | Path | Contents |
 |---|---|
 | `src/recipe_fusion/data/` | Dataset index (`upmc.py`) and download (`download.py`) |
+| `src/recipe_fusion/features/` | Feature cache shared by all models (`cache.py`) |
 | `src/recipe_fusion/seed.py` | Seeding and device selection |
 | `configs/` | Hydra configuration: paths, data |
 | `scripts/` | One-off scripts (`gpu_check.py`) |
