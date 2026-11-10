@@ -111,6 +111,18 @@ def test_resolve_revision_is_none_for_local_path(tmp_path):
     assert T.resolve_revision(str(tmp_path)) is None
 
 
+def test_resolve_revision_reads_hf_cache_layout(tmp_path):
+    repo = tmp_path / "models--org--name"
+    (repo / "refs").mkdir(parents=True)
+    (repo / "refs" / "main").write_text("abc123")
+    snapshot = repo / "snapshots" / "abc123"
+    snapshot.mkdir(parents=True)
+    (snapshot / "config.json").write_text("{}")
+
+    assert T.resolve_revision("org/name", cache_dir=tmp_path) == "abc123"
+    assert T.resolve_revision("org/other", cache_dir=tmp_path) is None
+
+
 def test_load_model_is_frozen_and_eval(tmp_path, tokenizer, model):
     model.save_pretrained(tmp_path / "ckpt")
     tokenizer.save_pretrained(tmp_path / "ckpt")

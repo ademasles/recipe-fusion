@@ -19,7 +19,7 @@ import hydra
 import numpy as np
 import torch
 import transformers
-from huggingface_hub import hf_hub_download
+from huggingface_hub import try_to_load_from_cache
 from hydra.utils import to_absolute_path
 from omegaconf import DictConfig
 from tqdm import tqdm
@@ -114,17 +114,15 @@ def load_model(model_name: str, device):
     return tokenizer, model
 
 
-def resolve_revision(model_name: str) -> str | None:
-    """Exact Hub revision of the weights, read from the local HF cache.
+def resolve_revision(model_name: str, cache_dir: Path | None = None) -> str | None:
+    """Hub revision of the cached weights (no network).
 
-    The snapshot directory is named after the commit hash. Returns None for a
-    local checkpoint (no hub revision).
+    Returns None for a local checkpoint or a model that is not in the HF cache.
     """
-    try:
-        config_path = hf_hub_download(model_name, "config.json")
-    except Exception:
+    if Path(model_name).is_dir():  # local checkpoint: no hub revision
         return None
-    return Path(config_path).parent.name
+    path = try_to_load_from_cache(model_name, "config.json", cache_dir=cache_dir)
+    return Path(path).parent.name if isinstance(path, str) else None
 
 
 def run(
