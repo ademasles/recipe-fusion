@@ -1,7 +1,12 @@
-root: ${paths.data_dir}/upmc-food101
+# @package _global_
+defaults:
+  - /paths: default
+  - _self_
+
+root: ${paths.upmc_dir}
+out_dir: ${paths.features_dir}/text/bert-base-uncased
 model_name: bert-base-uncased
 batch_size: 256
-length_percentile: 99   # L = next power of two above the train p99 of WordPiece lengths
-max_len: null           # null = measured; only force it knowingly
-out_dir: ${paths.features_dir}/text/bert-base-uncased
+length_percentile: 99   # L = train p99 of WordPiece lengths...
 length_multiple: 8      # ...rounded up to a multiple of 8
+max_len: null           # null = measured; only force it knowingly

@@ -10,7 +10,14 @@ from transformers import BertConfig, BertModel, BertTokenizer
 from recipe_fusion.features import text as T
 from recipe_fusion.features.cache import read_features
 
-CONFIG_DIR = Path(__file__).resolve().parents[1] / "configs" / "features"
+CONFIG_DIR = Path(__file__).resolve().parents[1] / "configs"
+
+
+def compose_text_cfg(*overrides: str):
+    with initialize_config_dir(config_dir=str(CONFIG_DIR), version_base=None):
+        return compose(config_name="features/text", overrides=list(overrides))
+
+
 VOCAB = [
     "[PAD]", "[UNK]", "[CLS]", "[SEP]", "[MASK]", "chocolate", "cake",
     "tomato", "soup", "apple", "pie", "easy", "best", "&", "##s",
@@ -77,6 +84,13 @@ def test_length_helpers(tokenizer):
     assert T.truncated_pct(np.array([3, 5, 9, 10]), 8) == 50.0
 
 
+def test_paths_follow_f101_data_dir(tmp_path, monkeypatch):
+    monkeypatch.setenv("F101_DATA_DIR", str(tmp_path))
+    cfg = compose_text_cfg()
+    assert cfg.root == f"{tmp_path}/upmc-food101"
+    assert cfg.out_dir == f"{tmp_path}/features/text/bert-base-uncased"
+
+
 def test_preprocess_is_unescape_and_strip_only():
     assert T.preprocess("  Bob&#039;s Red Mill ") == "Bob's Red Mill"
     assert T.preprocess("Raw Apple Pie &amp; Crumble") == "Raw Apple Pie & Crumble"
@@ -117,12 +131,10 @@ def test_run_from_composed_hydra_config(tmp_path, tokenizer, model, monkeypatch)
     monkeypatch.setattr(T, "read_split", lambda root, split: iter(fake[split]))
 
     out = tmp_path / "out"
-    with initialize_config_dir(config_dir=str(CONFIG_DIR), version_base=None):
-        cfg = compose(config_name="text", overrides=[f"out_dir={out}", "batch_size=2"])
+    cfg = compose_text_cfg("batch_size=2")
     assert cfg.model_name == "bert-base-uncased"  # defaults come from text.yaml
 
-    metas = T.run(Path(cfg.root), cfg, tokenizer, model, revision="abc123")
-
+    metas = T.run(Path(cfg.root), out, cfg, tokenizer, model, revision="abc123")
     for split in ("train", "test"):
         features = read_features(out, split, mmap=False)  # validated by write_features
         assert features.ids == [s.image_name for s in fake[split]]
