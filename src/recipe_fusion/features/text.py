@@ -20,6 +20,7 @@ import numpy as np
 import torch
 import transformers
 from huggingface_hub import hf_hub_download
+from hydra.utils import to_absolute_path
 from omegaconf import DictConfig
 from tqdm import tqdm
 from transformers import AutoModel, AutoTokenizer
@@ -38,10 +39,9 @@ def preprocess(title: str) -> str:
     return html.unescape(title).strip()
 
 
-def next_pow2(x: float) -> int:
-    """Smallest power of two >= x."""
-    n = max(1, math.ceil(x))
-    return 1 << (n - 1).bit_length()
+def round_up(x: float, multiple: int = 8) -> int:
+    """Smallest multiple of ``multiple`` that is >= x (at least one multiple)."""
+    return max(multiple, multiple * math.ceil(x / multiple))
 
 
 def token_lengths(texts: list[str], tokenizer) -> np.ndarray:
@@ -94,21 +94,6 @@ def encode(texts, tokenizer, model, max_len: int, batch_size: int = 256):
     return pooled, tokens, mask
 
 
-def check_outputs(pooled, tokens, mask) -> None:
-    if not (np.isfinite(pooled).all() and np.isfinite(tokens).all()):
-        raise ValueError("NaN or inf in the features")
-    if mask.sum(axis=1).min() < 1:
-        raise ValueError("a row has no unmasked token")
-
-
-def write_split(out_dir: Path, split: str, ids, pooled, tokens, mask) -> None:
-    """Contract 2.2 files for one split."""
-    (out_dir / f"{split}_ids.txt").write_text("\n".join(ids) + "\n", encoding="utf-8")
-    np.save(out_dir / f"{split}_pooled.npy", pooled)
-    np.save(out_dir / f"{split}_tokens.npy", tokens)
-    np.save(out_dir / f"{split}_mask.npy", mask)
-
-
 def git_commit() -> str:
     try:
         out = subprocess.run(
@@ -144,6 +129,7 @@ def resolve_revision(model_name: str) -> str | None:
 
 def run(
     root: Path,
+    out_dir: Path,
     cfg: Mapping[str, Any],
     tokenizer,
     model,
@@ -154,7 +140,6 @@ def run(
 
     Returns the metadata written for each split.
     """
-    out_dir = Path(cfg["out_dir"])
 
     samples = {s: list(read_split(root, s)) for s in SPLITS}
     texts = {s: [preprocess(x.text) for x in samples[s]] for s in SPLITS}
@@ -162,7 +147,7 @@ def run(
 
     pct = float(cfg["length_percentile"])
     p_val = float(np.percentile(lengths["train"], pct))
-    max_len = int(cfg.get("max_len") or next_pow2(p_val))
+    max_len = int(cfg.get("max_len") or round_up(p_val, int(cfg["length_multiple"])))
     batch_size = int(cfg["batch_size"])
 
     common: dict[str, Any] = {
@@ -198,13 +183,15 @@ def run(
     return metas
 
 
-@hydra.main(version_base=None, config_path="../../../configs/features", config_name="text")
+@hydra.main(version_base=None, config_path="../../../configs", config_name="features/text")
 def main(cfg: DictConfig) -> None:
     device = pick_device()
     print(f"device={device}", flush=True)
     tokenizer, model = load_model(cfg.model_name, device)
     revision = resolve_revision(cfg.model_name)
-    meta = run(Path(cfg.root), cfg, tokenizer, model, str(device), revision)
+    root = Path(to_absolute_path(cfg.root))
+    out_dir = Path(to_absolute_path(cfg.out_dir))
+    meta = run(root, out_dir, cfg, tokenizer, model, str(device), revision)
     print(json.dumps(meta, indent=2))
 
 

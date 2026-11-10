@@ -72,7 +72,8 @@ def test_truncation_keeps_max_len(tokenizer, model):
 def test_length_helpers(tokenizer):
     lengths = T.token_lengths(["chocolate cake", "apple"], tokenizer)
     assert lengths.tolist() == [4, 3]  # + [CLS] [SEP]
-    assert T.next_pow2(32) == 32 and T.next_pow2(32.2) == 64 and T.next_pow2(1) == 1
+    assert T.round_up(39) == 40 and T.round_up(40) == 40
+    assert T.round_up(40.2) == 48 and T.round_up(1) == 8
     assert T.truncated_pct(np.array([3, 5, 9, 10]), 8) == 50.0
 
 
@@ -132,5 +133,5 @@ def test_run_from_composed_hydra_config(tmp_path, tokenizer, model, monkeypatch)
         assert meta["extraction_seconds"] >= 0
         assert meta["weights_revision"] == "abc123"
         assert meta["d"] == 32
-        assert meta["L"] & (meta["L"] - 1) == 0  # power of two
+        assert meta["L"] % 8 == 0
         assert "git_commit" in meta and "truncated_pct" in meta
