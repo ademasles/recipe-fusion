@@ -1,0 +1,7 @@
+defaults:
+  - paths: default
+  - _self_
+
+hydra:
+  run:
+    dir: outputs/check-images/${now:%Y-%m-%d}/${now:%H-%M-%S}

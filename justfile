@@ -34,3 +34,7 @@ kernel:
 # e.g. `just download data.texts_only=true`
 download *ARGS:
     uv run python -m recipe_fusion.data.download {{ARGS}}
+
+# Check every dataset image can be fully decoded; reports are written under outputs/check-images/
+check-images *ARGS:
+    uv run python -m recipe_fusion.features.image {{ARGS}}
