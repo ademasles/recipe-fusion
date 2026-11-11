@@ -1,0 +1,15 @@
+# @package _global_
+
+defaults:
+  - /paths@_global_: default
+  - _self_
+
+extract:
+  device: auto
+  batch_size: 64
+  num_workers: 4
+  pin_memory: true
+
+hydra:
+  run:
+    dir: outputs/extract-image/${now:%Y-%m-%d}/${now:%H-%M-%S}

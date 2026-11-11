@@ -38,7 +38,8 @@ def check_images(root: Path, splits: Iterable[str] = SPLITS) -> list[ImageIssue]
             path = sample.image_path(root)
             try:
                 with Image.open(path) as image:
-                    image.load()
+                    rgb_image = image.convert("RGB")
+                    rgb_image.close()
             except FileNotFoundError as exc:
                 issues.append(ImageIssue(path, "missing", str(exc)))
             except (OSError, SyntaxError, Image.DecompressionBombError) as exc:

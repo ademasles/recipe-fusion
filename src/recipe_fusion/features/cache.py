@@ -50,8 +50,17 @@ def _check_dtype(name: str, array: np.ndarray, dtype: type[np.generic]) -> None:
 
 
 def _check_finite(name: str, array: np.ndarray) -> None:
-    if not np.isfinite(array).all():
-        raise ValueError(f"{name}: contains NaN or infinite values")
+    values_per_row = int(np.prod(array.shape[1:])) if array.ndim > 1 else 1
+    rows_per_chunk = max(1, 1_000_000 // values_per_row)
+    for start in range(0, len(array), rows_per_chunk):
+        if not np.isfinite(array[start : start + rows_per_chunk]).all():
+            raise ValueError(f"{name}: contains NaN or infinite values")
+
+
+def _save_array(path: Path, array: npt.NDArray) -> None:
+    filename = getattr(array, "filename", None)
+    if filename is None or Path(filename).resolve() != path.resolve():
+        np.save(path, array)
 
 
 def validate(features: Features) -> None:
@@ -101,10 +110,10 @@ def write_features(
 
     directory.mkdir(parents=True, exist_ok=True)
     paths = _paths(directory, split)
-    np.save(paths["pooled"], pooled)
+    _save_array(paths["pooled"], pooled)
     if tokens is not None and mask is not None:
-        np.save(paths["tokens"], tokens)
-        np.save(paths["mask"], mask)
+        _save_array(paths["tokens"], tokens)
+        _save_array(paths["mask"], mask)
     else:
         # A stale token file from an earlier run would otherwise be read back with these ids.
         paths["tokens"].unlink(missing_ok=True)

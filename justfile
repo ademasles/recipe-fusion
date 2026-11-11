@@ -6,7 +6,7 @@ sync:
     uv sync
 
 test:
-    uv run pytest
+    PYTHONPATH=src uv run pytest
 
 lint:
     uv run ruff check .
@@ -24,7 +24,7 @@ check: lint typecheck test
 
 # GPU availability + micro-benchmark
 gpu:
-    uv run python scripts/gpu_check.py
+    PYTHONPATH=src uv run python scripts/gpu_check.py
 
 # Register this project's venv as a Jupyter kernel
 kernel:
@@ -33,8 +33,12 @@ kernel:
 # Download UPMC Food-101 from Kaggle (8.3 GB); Hydra overrides go after the recipe name,
 # e.g. `just download data.texts_only=true`
 download *ARGS:
-    uv run python -m recipe_fusion.data.download {{ARGS}}
+    PYTHONPATH=src uv run python -m recipe_fusion.data.download {{ARGS}}
 
 # Check every dataset image can be fully decoded; reports are written under outputs/check-images/
 check-images *ARGS:
-    uv run python -m recipe_fusion.features.image {{ARGS}}
+    PYTHONPATH=src uv run python -m recipe_fusion.features.image {{ARGS}}
+
+# Extract pooled and 8x8 ViT features; Hydra overrides go after the recipe name
+extract-image *ARGS:
+    PYTHONPATH=src uv run python -m recipe_fusion.features.extract_image {{ARGS}}
