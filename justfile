@@ -49,3 +49,7 @@ check-images *ARGS:
 # Extract ViT-B/16 pooled and 8x8 grid features; Hydra overrides go after the recipe name
 extract-image *ARGS:
     uv run python -m recipe_fusion.features.extract_image {{ARGS}}
+
+# Score every prediction file with the shared metrics; `just evaluate split=test` for the final table
+evaluate *ARGS:
+    uv run python -m recipe_fusion.evaluate {{ARGS}}

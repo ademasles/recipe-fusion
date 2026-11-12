@@ -1,0 +1,16 @@
+defaults:
+  - paths: default
+  - _self_
+
+# val for model selection; test only for the final table.
+split: val
+val_ids: splits/val_ids.txt
+preds_dir: outputs/preds
+results_dir: outputs/results
+# Extra subsets reported next to "all": name -> file of image ids, one per line,
+# e.g. title_unseen: splits/test_title_unseen.txt
+subsets: {}
+
+hydra:
+  run:
+    dir: outputs/evaluate/${now:%Y-%m-%d}/${now:%H-%M-%S}
