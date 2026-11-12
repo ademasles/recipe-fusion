@@ -88,3 +88,26 @@ def test_labels_for_follows_ids_order() -> None:
     np.testing.assert_array_equal(labels, [1, 0])
     with pytest.raises(KeyError, match=r"c_1\.jpg"):
         labels_for(["c_1.jpg"], samples, ["a", "b"])
+
+
+def test_tokens_already_memmapped_at_destination_are_not_rewritten(tmp_path: Path) -> None:
+    pooled, tokens, mask = arrays()
+    path = tmp_path / "train_tokens.npy"
+    on_disk = np.lib.format.open_memmap(path, mode="w+", dtype=tokens.dtype, shape=tokens.shape)
+    on_disk[:] = tokens
+    on_disk.flush()
+    modified = path.stat().st_mtime_ns
+
+    write_features(tmp_path, "train", IDS, pooled, on_disk, mask)
+    assert path.stat().st_mtime_ns == modified
+    features = read_features(tmp_path, "train", mmap=False)
+    assert features.tokens is not None
+    np.testing.assert_array_equal(features.tokens, tokens)
+
+
+def test_non_finite_value_in_last_chunk_is_rejected(tmp_path: Path) -> None:
+    # 1_000_000 values per chunk: 2 rows of 600_000 put the last row in a second chunk.
+    pooled = np.zeros((2, 600_000), dtype=np.float16)
+    pooled[-1, -1] = np.inf
+    with pytest.raises(ValueError, match="NaN"):
+        write_features(tmp_path, "train", ["a.jpg", "b.jpg"], pooled)

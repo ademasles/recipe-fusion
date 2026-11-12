@@ -24,6 +24,8 @@ just gpu         # check that PyTorch sees the GPU
 just check       # ruff + basedpyright + pytest
 just download    # UPMC Food-101 from Kaggle (8.3 GB)
 just make-split  # validation split, once (already committed in splits/)
+just check-images  # fully decode every image; report under outputs/check-images/
+just extract-image # ViT-B/16 pooled + 8x8 grid features
 uv run pre-commit install   # once after cloning
 ```
 
@@ -45,7 +47,7 @@ uv tool install rust-just                         # just, distributed through uv
 | Path | Contents |
 |---|---|
 | `src/recipe_fusion/data/` | Dataset index (`upmc.py`) and download (`download.py`) |
-| `src/recipe_fusion/features/` | Feature cache shared by all models (`cache.py`) |
+| `src/recipe_fusion/features/` | Image integrity check and ViT extraction, plus feature cache |
 | `src/recipe_fusion/seed.py` | Seeding and device selection |
 | `configs/` | Hydra configuration: paths, data |
 | `scripts/` | One-off scripts (`gpu_check.py`) |
