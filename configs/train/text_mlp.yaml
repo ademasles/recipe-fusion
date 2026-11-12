@@ -1,0 +1,30 @@
+# @package _global_
+defaults:
+  - /paths: default
+  - _self_
+
+method: text_mlp
+condition: text_only
+features: ${paths.features_dir}/text/bert-base-uncased
+val_ids: splits/val_ids.txt  # committed, relative to the repository root
+outputs_dir: outputs
+seeds: [0, 1, 2]
+
+# Protocol 2.4: 6 trials with seed 0, then the best one with every seed.
+sweep:
+  seed: 0
+  lr: [0.0003, 0.001, 0.003]
+  weight_decay: [0.0001, 0.01]
+
+head:
+  hidden: 512
+  dropout: 0.3
+
+train:
+  batch_size: 256
+  max_epochs: 50
+  patience: 5
+
+hydra:
+  run:
+    dir: outputs/text_mlp/${now:%Y-%m-%d}/${now:%H-%M-%S}

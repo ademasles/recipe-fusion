@@ -19,6 +19,13 @@ fmt:
 typecheck:
     uv run basedpyright
 
+# Text references (sheet B2): TF-IDF + logistic regression, and the MLP head on frozen BERT
+train-tfidf *ARGS:
+    uv run python -m recipe_fusion.models.tfidf_logreg {{ARGS}}
+
+train-text-mlp *ARGS:
+    uv run python -m recipe_fusion.models.text_mlp {{ARGS}}
+
 extract-text *overrides:
     uv run python -m recipe_fusion.features.text {{overrides}}
 
