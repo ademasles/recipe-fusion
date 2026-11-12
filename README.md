@@ -26,9 +26,20 @@ just download    # UPMC Food-101 from Kaggle (8.3 GB)
 just make-split  # validation split, once (already committed in splits/)
 just check-images  # fully decode every image; report under outputs/check-images/
 just extract-image # ViT-B/16 pooled + 8x8 grid features
+just train-image-mlp # train image_mlp; save per-seed checkpoints and val/test logits
 just evaluate      # score every prediction file (outputs/results/)
 uv run pre-commit install   # once after cloning
 ```
+
+`train-image-mlp` uses the frozen ViT pooled features and the fixed validation split. Before
+training it checks cache metadata and image-id alignment with the title files. It selects each
+seed's checkpoint using validation top-1 (validation NLL breaks ties), saves weights to
+`outputs/ckpt/image_mlp/seed<k>.pt`, and writes `val_image.npz` and `test_image.npz` under
+`outputs/preds/image_mlp/seed<k>/` for evaluation and late-fusion work. If validation top-1 is
+more than about 10 percentage points below the 72.83% reference, it warns to inspect preprocessing
+and ID/label alignment before changing hyperparameters. This is only a rough sanity check: that
+reference used augmentation and selected on the test set. Check the optimization defaults in
+`configs/image_mlp.yaml` against the full course protocol 2.4 before the final experiment.
 
 To explore the text alone, `just download data.texts_only=true` fetches the two title files
 (7.6 MB) in a few seconds.
