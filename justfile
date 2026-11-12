@@ -6,7 +6,7 @@ sync:
     uv sync
 
 test:
-    PYTHONPATH=src uv run pytest
+    uv run pytest
 
 lint:
     uv run ruff check .
@@ -27,7 +27,7 @@ check: lint typecheck test
 
 # GPU availability + micro-benchmark
 gpu:
-    PYTHONPATH=src uv run python scripts/gpu_check.py
+    uv run python scripts/gpu_check.py
 
 # Register this project's venv as a Jupyter kernel
 kernel:
