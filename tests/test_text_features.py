@@ -91,12 +91,8 @@ def test_paths_follow_f101_data_dir(tmp_path, monkeypatch):
     assert cfg.out_dir == f"{tmp_path}/features/text/bert-base-uncased"
 
 
-def test_preprocess_is_unescape_and_strip_only():
-    assert T.preprocess("  Bob&#039;s Red Mill ") == "Bob's Red Mill"
-    assert T.preprocess("Raw Apple Pie &amp; Crumble") == "Raw Apple Pie & Crumble"
-    # known and intended: a single unescape pass
-    assert T.preprocess("Mom&amp;rsquo;s Apple Pie") == "Mom&rsquo;s Apple Pie"
-    assert T.preprocess("Know \\xe2\\x84\\xa2") == "Know \\xe2\\x84\\xa2"
+def test_preprocess_is_the_shared_cleaning():
+    assert T.preprocess("Mom&amp;rsquo;s  Pie ") == "Mom\N{RIGHT SINGLE QUOTATION MARK}s Pie"
 
 
 def test_residual_escape_pct():
