@@ -9,8 +9,8 @@ from recipe_fusion.data.loading import Splits, load_splits
 from recipe_fusion.data.upmc import Sample
 from recipe_fusion.features.cache import write_features
 from recipe_fusion.models import text_mlp, tfidf_logreg
+from recipe_fusion.models.heads import load_head
 from recipe_fusion.preds import ckpt_path, preds_path
-from recipe_fusion.training import load_head
 
 CLASSES = ["apple_pie", "bagel", "caesar_salad"]
 WORDS = ["pommes", "bretzel", "romaine"]  # one signature word per class

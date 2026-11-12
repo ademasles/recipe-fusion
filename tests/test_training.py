@@ -3,8 +3,9 @@ import pytest
 import torch
 import torch.nn.functional as F
 
+from recipe_fusion.models.heads import MLPHead, load_head, save_head
 from recipe_fusion.seed import seed_everything
-from recipe_fusion.training import MLPHead, fit, load_head, predict_logits, save_head
+from recipe_fusion.training import ArrayBatches, TrainConfig, fit, predict
 
 CPU = torch.device("cpu")
 
@@ -25,14 +26,30 @@ def new_head() -> MLPHead:
 def run_fit(model: MLPHead, y_val: np.ndarray | None = None, **kwargs):
     x_train, y_train = blobs(seed=0)
     x_val, y_val_true = blobs(n_per_class=20, seed=1)
-    options = {"lr": 1e-2, "weight_decay": 1e-4, "seed": 0, "device": CPU, "batch_size": 32}
+    options = {"lr": 1e-2, "weight_decay": 1e-4, "batch_size": 32}
     options.update(kwargs)
     labels = y_val_true if y_val is None else y_val
-    return fit(model, x_train, y_train, x_val, labels, **options)
+    return fit(
+        model,
+        ArrayBatches(x_train),
+        y_train,
+        ArrayBatches(x_val),
+        labels,
+        TrainConfig(**options),
+        CPU,
+        seed=0,
+    )
 
 
 def test_head_output_shape() -> None:
     assert new_head()(torch.zeros(5, 8)).shape == (5, 3)
+
+
+def test_array_batches_serve_rows_as_x() -> None:
+    x = np.arange(12, dtype=np.float16).reshape(6, 2)
+    batch = ArrayBatches(x).get(np.array([4, 1]))
+    assert set(batch) == {"x"}
+    np.testing.assert_array_equal(batch["x"].numpy(), x[[4, 1]])
 
 
 def test_fit_learns_and_restores_best_weights() -> None:
@@ -42,7 +59,7 @@ def test_fit_learns_and_restores_best_weights() -> None:
     assert result.val_top1 > 0.95
     assert 1 <= result.best_epoch <= result.epochs_run <= 20
     x_val, y_val = blobs(n_per_class=20, seed=1)
-    logits = torch.from_numpy(predict_logits(model, x_val, device=CPU))
+    logits = torch.from_numpy(predict(model, ArrayBatches(x_val), CPU))
     loss = F.cross_entropy(logits, torch.as_tensor(y_val)).item()
     assert loss == pytest.approx(result.val_loss, abs=1e-5)
 
@@ -61,7 +78,7 @@ def test_fit_is_deterministic_for_a_seed() -> None:
         seed_everything(0)
         model = new_head()
         run_fit(model, max_epochs=3)
-        outputs.append(predict_logits(model, x_val, device=CPU))
+        outputs.append(predict(model, ArrayBatches(x_val), CPU))
     np.testing.assert_allclose(outputs[0], outputs[1])
 
 
@@ -77,5 +94,5 @@ def test_head_checkpoint_round_trip(tmp_path) -> None:
     save_head(tmp_path / "ckpt" / "seed0.pt", model, lr=0.01, seed=0)
     loaded = load_head(tmp_path / "ckpt" / "seed0.pt")
     np.testing.assert_allclose(
-        predict_logits(loaded, x, device=CPU), predict_logits(model, x, device=CPU)
+        predict(loaded, ArrayBatches(x), CPU), predict(model, ArrayBatches(x), CPU)
     )

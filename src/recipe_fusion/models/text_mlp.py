@@ -24,9 +24,10 @@ from omegaconf import DictConfig
 from recipe_fusion.data.loading import Splits, load_splits
 from recipe_fusion.data.upmc import Sample
 from recipe_fusion.features.cache import Features, labels_for, read_features
+from recipe_fusion.models.heads import MLPHead, save_head
 from recipe_fusion.preds import ckpt_path, preds_path, write_preds
 from recipe_fusion.seed import pick_device, seed_everything
-from recipe_fusion.training import FitResult, MLPHead, fit, predict_logits, save_head
+from recipe_fusion.training import ArrayBatches, FitResult, TrainConfig, fit, predict
 
 log = logging.getLogger(__name__)
 
@@ -95,19 +96,22 @@ def train_one(
         n_classes=len(data.classes),
         dropout=float(cfg.head.dropout),
     )
-    result = fit(
-        model,
-        data.x_train,
-        data.y_train,
-        data.x_val,
-        data.y_val,
+    train_cfg = TrainConfig(
         lr=lr,
         weight_decay=weight_decay,
-        seed=seed,
-        device=device,
         batch_size=int(cfg.train.batch_size),
         max_epochs=int(cfg.train.max_epochs),
         patience=int(cfg.train.patience),
+    )
+    result = fit(
+        model,
+        ArrayBatches(data.x_train),
+        data.y_train,
+        ArrayBatches(data.x_val),
+        data.y_val,
+        train_cfg,
+        device,
+        seed,
     )
     return model, result
 
@@ -150,8 +154,8 @@ def run(cfg: DictConfig, data: TextData, device: torch.device) -> dict[str, Any]
             seed=seed,
             device=device,
         )
-        val_logits = predict_logits(model, data.x_val, device=device)
-        test_logits = predict_logits(model, data.x_test, device=device)
+        val_logits = predict(model, ArrayBatches(data.x_val), device)
+        test_logits = predict(model, ArrayBatches(data.x_test), device)
         write_preds(
             preds_path(outputs, method, seed, "val", condition),
             data.ids_val,
@@ -190,7 +194,7 @@ def main(cfg: DictConfig) -> None:
         Path(to_absolute_path(cfg.paths.upmc_dir)), Path(to_absolute_path(cfg.val_ids))
     )
     data = load_text_data(splits, Path(to_absolute_path(cfg.features)))
-    summary = run(cfg, data, pick_device())
+    summary = run(cfg, data, pick_device(str(cfg.device)))
     out_dir = Path(HydraConfig.get().runtime.output_dir)
     (out_dir / "summary.json").write_text(json.dumps(summary, indent=2) + "\n", encoding="utf-8")
     log.info("val top-1 %.4f ± %.4f", summary["val_top1_mean"], summary["val_top1_std"])

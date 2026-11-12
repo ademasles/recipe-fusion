@@ -26,8 +26,9 @@ from recipe_fusion.data.split import read_ids
 from recipe_fusion.data.upmc import class_names, read_split
 from recipe_fusion.features.cache import Features, labels_for, read_features
 from recipe_fusion.features.text import git_commit
+from recipe_fusion.preds import write_preds
 from recipe_fusion.seed import pick_device, seed_everything
-from recipe_fusion.training import TrainConfig, fit, predict, write_preds
+from recipe_fusion.training import TrainConfig, fit, predict
 
 log = logging.getLogger(__name__)
 
@@ -343,10 +344,16 @@ def final(
             preds / f"seed{seed}" / "val_both.npz",
             splits.val_ids,
             predict(model, splits.val, device),
+            n_classes=splits.n_classes,
         )
         for condition in CONDITIONS:
             logits = predict(model, splits.test.ablated(condition, means), device)
-            write_preds(preds / f"seed{seed}" / f"test_{condition}.npz", splits.test_ids, logits)
+            write_preds(
+                preds / f"seed{seed}" / f"test_{condition}.npz",
+                splits.test_ids,
+                logits,
+                n_classes=splits.n_classes,
+            )
         log.info(
             "seed %d: val top1 %.4f at epoch %d", seed, summary["val_top1"], summary["best_epoch"]
         )
