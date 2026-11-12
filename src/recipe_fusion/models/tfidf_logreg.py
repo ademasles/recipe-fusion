@@ -5,7 +5,6 @@ on the validation top-1 (ties keep the smaller C). The fit is deterministic, so 
 are written for every seed. Test predictions are written for the chosen C only.
 """
 
-import html
 import json
 import logging
 from collections.abc import Sequence
@@ -20,6 +19,7 @@ from omegaconf import DictConfig
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.linear_model import LogisticRegression
 
+from recipe_fusion.data.clean import clean_title
 from recipe_fusion.data.loading import Splits, load_splits
 from recipe_fusion.data.upmc import Sample
 from recipe_fusion.features.cache import labels_for
@@ -29,8 +29,8 @@ log = logging.getLogger(__name__)
 
 
 def titles(samples: Sequence[Sample]) -> list[str]:
-    """html.unescape, then lowercase."""
-    return [html.unescape(s.text).lower() for s in samples]
+    """The shared cleaning (same text as the BERT models), then lowercase."""
+    return [clean_title(s.text).lower() for s in samples]
 
 
 def names(samples: Sequence[Sample]) -> list[str]:
