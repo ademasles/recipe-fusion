@@ -69,3 +69,7 @@ evaluate *ARGS:
 # val/test predictions with the ablations; `lr=1e-3 weight_decay=1e-2` skips the search
 train-cross-attention *ARGS:
     uv run python -m recipe_fusion.models.cross_attention {{ARGS}}
+
+# Late fusion from existing unimodal prediction files; no model training
+train-late-fusion *ARGS:
+    uv run python -m recipe_fusion.models.late_fusion {{ARGS}}

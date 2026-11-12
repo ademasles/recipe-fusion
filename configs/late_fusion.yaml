@@ -1,0 +1,21 @@
+# @package _global_
+
+defaults:
+  - /paths: default
+  - _self_
+
+outputs_dir: outputs
+val_ids: splits/val_ids.txt
+image_method: image_mlp
+image_condition: image_only
+text_method: text_mlp
+text_condition: text_only
+# Set these to the method and baseline condition once B4 predictions are available.
+text_ft_method: null
+text_ft_condition: null
+seeds: [0, 1, 2]
+conditions: [both, text_mean, image_mean, text_shuffled, image_shuffled]
+
+hydra:
+  run:
+    dir: outputs/train/late-fusion/${now:%Y-%m-%d}/${now:%H-%M-%S}
