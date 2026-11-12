@@ -75,6 +75,7 @@ evaluate *ARGS:
 train-cross-attention *ARGS:
     uv run python -m recipe_fusion.models.cross_attention {{ARGS}}
 
-# Late fusion from existing unimodal prediction files; no model training
+# Late fusion of text_mlp and image_mlp predictions (calibrated on val, nothing trained);
+# `text.method=tfidf_logreg name=late_calibrated_tfidf sum_name=null` for another text reference
 train-late-fusion *ARGS:
     uv run python -m recipe_fusion.models.late_fusion {{ARGS}}

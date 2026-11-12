@@ -30,7 +30,7 @@ just extract-image # ViT-B/16 pooled + 8x8 grid features
 just train-image-mlp # image baseline: MLP on frozen ViT
 just evaluate      # score every prediction file (outputs/results/)
 just train-cross-attention  # search lr/wd, then 3 seeds + test ablations
-just train-late-fusion      # combine existing image/text logits; no new model training
+just train-late-fusion      # calibrated late fusion of the text and image MLPs
 just train-tfidf   # text baseline: TF-IDF + logistic regression
 just train-text-mlp # text baseline: MLP on frozen BERT
 uv run pre-commit install   # once after cloning
@@ -82,18 +82,6 @@ uv tool install rust-just                         # just, distributed through uv
 - GPU-free code: `pick_device()`, never a hard-coded `"cuda"`, tests run on CPU.
 - No data, checkpoints or secrets in git; `gitleaks` runs as a pre-commit hook.
 - Code, comments and commit messages in English, following Conventional Commits.
-
-Late fusion reads the common prediction files under `outputs/preds/<method>/seed<k>/` and does
-not train a network. Run `just train-late-fusion text_method=tfidf_logreg` to select another text
-baseline. It writes raw-logit sums (`late_sum`) and validation-calibrated combinations
-(`late_calibrated`); configure `text_ft_method` to also write `late_calibrated_ft`. Calibration
-uses only validation logits, with a temperature grid in log-space from -2 to 2 and a weight grid
-from 0 to 1 in steps of 0.05. Each seed's selected temperatures and image weight are recorded in
-the corresponding method `meta.json`. The normal input predictions use their configured base
-conditions; ablation runs require modality-specific `text_mean`/`text_shuffled` or
-`image_mean`/`image_shuffled` prediction files from the unimodal model.
-To run the normal-condition comparison before ablation logits are ready, use
-`just train-late-fusion conditions=[both]`.
 
 ## Licences
 

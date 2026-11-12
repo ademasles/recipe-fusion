@@ -5,177 +5,150 @@ import numpy as np
 import pytest
 from hydra import compose, initialize_config_dir
 
+from recipe_fusion.data.loading import load_splits
+from recipe_fusion.features.cache import write_features
+from recipe_fusion.models.heads import MLPHead, save_head
 from recipe_fusion.models.late_fusion import (
     CONDITIONS,
+    Fusion,
     calibrate_temperature,
     choose_weight,
+    mean_row,
     run,
 )
-from recipe_fusion.preds import preds_path
+from recipe_fusion.preds import ckpt_path, preds_path, write_preds
 
 CONFIGS = Path(__file__).resolve().parents[1] / "configs"
 CLASSES = ["apple_pie", "bagel", "sushi"]
-
-
-def _write_predictions(
-    outputs: Path,
-    method: str,
-    seed: int,
-    split: str,
-    condition: str,
-    ids: list[str],
-    labels: np.ndarray,
-    *,
-    offset: int,
-) -> None:
-    logits = np.full((len(ids), len(CLASSES)), -1, dtype=np.float32)
-    logits[np.arange(len(ids)), (labels + offset) % len(CLASSES)] = 2
-    path = preds_path(outputs, method, seed, split, condition)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    np.savez(path, ids=np.asarray(ids), logits=logits)
-
-
-def _write_dataset(root: Path) -> tuple[list[str], list[int], list[str], list[int], Path]:
-    titles = root / "upmc-food101" / "texts"
-    titles.mkdir(parents=True)
-    train_lines = [f"{label}_{i}.jpg,title,{label}\n" for label in CLASSES for i in range(3)]
-    (titles / "train_titles.csv").write_text("".join(train_lines), encoding="utf-8")
-    val_ids = [f"{label}_0.jpg" for label in CLASSES]
-    val_file = root / "val_ids.txt"
-    val_file.write_text("\n".join(val_ids) + "\n", encoding="utf-8")
-    test_ids = [f"{label}_test.jpg" for label in CLASSES]
-    (titles / "test_titles.csv").write_text(
-        "".join(
-            f"{image_id},title,{label}\n" for label, image_id in zip(CLASSES, test_ids, strict=True)
-        ),
-        encoding="utf-8",
-    )
-    return val_ids, list(range(3)), test_ids, list(range(3)), val_file
-
-
-def _config(root: Path, val_file: Path, *overrides: str):
-    with initialize_config_dir(config_dir=str(CONFIGS), version_base=None):
-        return compose(
-            config_name="late_fusion",
-            overrides=[
-                f"outputs_dir={root}",
-                f"val_ids={val_file}",
-                f"paths.data_dir={root}",
-                "seeds=[0,1]",
-                *overrides,
-            ],
-        )
+DIM = 4
 
 
 def test_temperature_and_weight_grids_select_validation_optima() -> None:
     labels = np.array([0, 1, 0, 1])
     confident = np.array([[4, 0], [0, 4], [4, 0], [0, 4]], dtype=np.float64)
-    temperature, nll = calibrate_temperature(confident, labels, np.array([-1.0, 0.0, 1.0]))
+    temperature, _ = calibrate_temperature(confident, labels, np.array([-1.0, 0.0, 1.0]))
     assert temperature == pytest.approx(np.exp(-1))
-    assert nll == pytest.approx(-np.log(np.exp(4 / temperature) / (np.exp(4 / temperature) + 1)))
 
     image = np.array([[5, 0], [0, 5], [5, 0], [0, 5]], dtype=np.float64)
     text = np.array([[0, 4], [4, 0], [0, 4], [4, 0]], dtype=np.float64)
     weight, top1, _ = choose_weight(image, text, labels, 1, 1)
-    assert weight == 1
-    assert top1 == 1
+    assert (weight, top1) == (1, 1)
 
 
-def test_run_writes_all_fusions_conditions_and_seed_metadata(tmp_path: Path) -> None:
-    val_ids, val_labels, test_ids, _, val_file = _write_dataset(tmp_path)
-    for seed in range(2):
-        for split, ids, labels in (
-            ("val", val_ids, np.asarray(val_labels)),
-            ("test", test_ids, np.asarray(val_labels)),
-        ):
-            for condition in ("image_only", "image_mean", "image_shuffled"):
-                _write_predictions(
-                    tmp_path,
-                    "image_mlp",
-                    seed,
-                    split,
-                    condition,
-                    ids,
-                    labels,
-                    offset=0,
-                )
-            for condition in ("text_only", "text_mean", "text_shuffled"):
-                _write_predictions(
-                    tmp_path,
-                    "text_mlp",
-                    seed,
-                    split,
-                    condition,
-                    ids,
-                    labels,
-                    offset=1,
-                )
-            for condition in ("text_only", "text_mean", "text_shuffled"):
-                _write_predictions(
-                    tmp_path,
-                    "text_bert_ft",
-                    seed,
-                    split,
-                    condition,
-                    ids,
-                    labels,
-                    offset=0,
-                )
-
-    cfg = _config(tmp_path, val_file, "text_ft_method=text_bert_ft")
-    summaries = run(cfg)
-    assert set(summaries) == {"0", "1"}
-    for method in ("late_sum", "late_calibrated", "late_calibrated_ft"):
-        for seed in range(2):
-            for condition in CONDITIONS:
-                for split, ids in (("val", val_ids), ("test", test_ids)):
-                    path = preds_path(tmp_path, method, seed, split, condition)
-                    with np.load(path, allow_pickle=False) as data:
-                        assert data["ids"].tolist() == ids
-                        assert data["logits"].shape == (3, 3)
-                        assert np.isfinite(data["logits"]).all()
-
-    metadata = json.loads((tmp_path / "preds/late_calibrated/meta.json").read_text())
-    assert set(metadata["conditions"]) == {"0", "1"}
-    for seed in ("0", "1"):
-        assert set(metadata["conditions"][seed]) == set(CONDITIONS)
-        for params in metadata["conditions"][seed].values():
-            assert -2 <= np.log(params["image_temperature"]) <= 2
-            assert -2 <= np.log(params["text_temperature"]) <= 2
-            assert 0 <= params["image_weight"] <= 1
-            assert params["image_weight"] * 20 == pytest.approx(round(params["image_weight"] * 20))
-    ft_meta = json.loads((tmp_path / "preds/late_calibrated_ft/meta.json").read_text())
-    assert ft_meta["text_method"] == "text_bert_ft"
+def write_dataset(root: Path) -> Path:
+    titles = root / "upmc-food101" / "texts"
+    titles.mkdir(parents=True)
+    train = [f"{c}_{i}.jpg,title,{c}\n" for c in CLASSES for i in range(4)]
+    test = [f"{c}_t{i}.jpg,title,{c}\n" for c in CLASSES for i in range(3)]
+    (titles / "train_titles.csv").write_text("".join(train))
+    (titles / "test_titles.csv").write_text("".join(test))
+    val_file = root / "val_ids.txt"
+    val_file.write_text("".join(f"{c}_{i}.jpg\n" for c in CLASSES for i in (0, 1)))
+    return val_file
 
 
-def test_missing_ablation_prediction_is_reported(tmp_path: Path) -> None:
-    val_ids, val_labels, test_ids, _, val_file = _write_dataset(tmp_path)
-    for split, ids, labels in (
-        ("val", val_ids, np.asarray(val_labels)),
-        ("test", test_ids, np.asarray(val_labels)),
-    ):
-        _write_predictions(tmp_path, "image_mlp", 0, split, "image_only", ids, labels, offset=0)
-        _write_predictions(tmp_path, "text_mlp", 0, split, "text_only", ids, labels, offset=0)
-    cfg = _config(tmp_path, val_file, "seeds=[0]")
-    with pytest.raises(FileNotFoundError, match="text_mean"):
-        run(cfg)
-    assert not (tmp_path / "preds/late_sum").exists()
+def write_unimodal(outputs: Path, method: str, condition: str, ids: list[str], seed: int) -> None:
+    rng = np.random.default_rng(hash((method, seed)) % 2**32)
+    labels = np.array([CLASSES.index(i.rsplit("_", 1)[0]) for i in ids])
+    logits = rng.normal(size=(len(ids), len(CLASSES))).astype(np.float32)
+    logits[np.arange(len(ids)), labels] += 1.5
+    split = "test" if "_t" in ids[0] else "val"
+    write_preds(preds_path(outputs, method, seed, split, condition), ids, logits, n_classes=3)
 
 
-def test_base_fusion_can_use_an_alternate_text_method(tmp_path: Path) -> None:
-    val_ids, _, test_ids, _, val_file = _write_dataset(tmp_path)
-    for split, ids in (("val", val_ids), ("test", test_ids)):
-        labels = np.arange(len(ids))
-        _write_predictions(tmp_path, "image_mlp", 0, split, "image_only", ids, labels, offset=0)
-        _write_predictions(tmp_path, "tfidf_logreg", 0, split, "text_only", ids, labels, offset=1)
-    cfg = _config(
-        tmp_path,
-        val_file,
-        "seeds=[0]",
-        "conditions=[both]",
-        "text_method=tfidf_logreg",
-    )
-    run(cfg)
-    assert preds_path(tmp_path, "late_sum", 0, "test", "both").is_file()
-    assert preds_path(tmp_path, "late_calibrated", 0, "val", "both").is_file()
-    assert not (tmp_path / "preds/late_calibrated_ft").exists()
+def setup(tmp_path: Path, *, text_head: bool):
+    val_file = write_dataset(tmp_path)
+    splits = load_splits(tmp_path / "upmc-food101", val_file)
+    val_ids = [s.image_name for s in splits.val]
+    test_ids = [s.image_name for s in splits.test]
+    outputs = tmp_path / "outputs"
+    for seed in (0, 1):
+        for ids in (val_ids, test_ids):
+            write_unimodal(outputs, "image_mlp", "image_only", ids, seed)
+            write_unimodal(outputs, "text_mlp", "text_only", ids, seed)
+    features = {}
+    for modality in ("image", "text") if text_head else ("image",):
+        method = f"{modality}_mlp"
+        features[modality] = tmp_path / "features" / modality
+        pooled = np.random.default_rng(0).normal(size=(len(splits.train_all), DIM))
+        write_features(
+            features[modality],
+            "train",
+            [s.image_name for s in splits.train_all],
+            pooled.astype(np.float16),
+        )
+        for seed in (0, 1):
+            head = MLPHead(dim_in=DIM, hidden=8, n_classes=3, dropout=0.0)
+            save_head(ckpt_path(outputs, method, seed), head, seed=seed)
+    with initialize_config_dir(config_dir=str(CONFIGS), version_base=None):
+        cfg = compose(
+            config_name="train/late_fusion",
+            overrides=[
+                f"outputs_dir={outputs}",
+                "seeds=[0,1]",
+                f"image.features={tmp_path / 'features' / 'image'}",
+                f"text.features={tmp_path / 'features' / 'text'}",
+            ],
+        )
+    return cfg, splits, outputs, test_ids
+
+
+def load(path: Path) -> tuple[list[str], np.ndarray]:
+    with np.load(path) as data:
+        return data["ids"].tolist(), data["logits"]
+
+
+def test_fusion_is_fitted_once_and_frozen_for_the_ablations(tmp_path: Path) -> None:
+    cfg, splits, outputs, test_ids = setup(tmp_path, text_head=True)
+    meta = run(cfg, splits)
+
+    for seed in (0, 1):
+        fusion = Fusion(
+            **{
+                k: meta["seeds"][str(seed)][k]
+                for k in ("image_temperature", "text_temperature", "image_weight")
+            }
+        )
+        _, image = load(preds_path(outputs, "image_mlp", seed, "test", "image_only"))
+        _, text = load(preds_path(outputs, "text_mlp", seed, "test", "text_only"))
+        permutation = np.random.default_rng(0).permutation(len(test_ids))
+        expected = {
+            "both": fusion(image, text),
+            "image_shuffled": fusion(image[permutation], text),
+            "text_shuffled": fusion(image, text[permutation]),
+        }
+        train_ids = [s.image_name for s in splits.train]
+        for modality in ("image", "text"):
+            row = mean_row(
+                outputs, f"{modality}_mlp", seed, tmp_path / "features" / modality, train_ids
+            )
+            assert row is not None
+            constant = np.broadcast_to(row, image.shape)
+            expected[f"{modality}_mean"] = (
+                fusion(constant, text) if modality == "image" else fusion(image, constant)
+            )
+        for condition in CONDITIONS:
+            ids, logits = load(preds_path(outputs, "late_calibrated", seed, "test", condition))
+            assert ids == test_ids
+            np.testing.assert_allclose(logits, expected[condition], rtol=1e-6)
+            assert preds_path(outputs, "late_sum", seed, "test", condition).is_file()
+        assert preds_path(outputs, "late_calibrated", seed, "val", "both").is_file()
+
+    saved = json.loads((outputs / "preds" / "late_calibrated" / "meta.json").read_text())
+    assert set(saved["seeds"]) == {"0", "1"}
+    assert saved["text"]["method"] == "text_mlp"
+
+
+def test_mean_ablation_is_skipped_without_a_head(tmp_path: Path) -> None:
+    cfg, splits, outputs, _ = setup(tmp_path, text_head=False)
+    run(cfg, splits)
+    assert preds_path(outputs, "late_calibrated", 0, "test", "image_mean").is_file()
+    assert not preds_path(outputs, "late_calibrated", 0, "test", "text_mean").exists()
+    assert preds_path(outputs, "late_calibrated", 0, "test", "text_shuffled").is_file()
+
+
+def test_missing_predictions_are_reported(tmp_path: Path) -> None:
+    cfg, splits, _, _ = setup(tmp_path, text_head=True)
+    cfg.text.method = "tfidf_logreg"
+    with pytest.raises(FileNotFoundError, match="tfidf_logreg"):
+        run(cfg, splits)
