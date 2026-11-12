@@ -27,6 +27,7 @@ just make-split  # validation split, once (already committed in splits/)
 just make-subsets  # evaluation subsets (committed in splits/) + duplicate report
 just check-images  # fully decode every image; report under outputs/check-images/
 just extract-image # ViT-B/16 pooled + 8x8 grid features
+just train-image-mlp # image baseline: MLP on frozen ViT
 just evaluate      # score every prediction file (outputs/results/)
 just train-cross-attention  # search lr/wd, then 3 seeds + test ablations
 just train-tfidf   # text baseline: TF-IDF + logistic regression
