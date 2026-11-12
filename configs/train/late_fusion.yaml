@@ -1,0 +1,27 @@
+# @package _global_
+defaults:
+  - /paths: default
+  - _self_
+
+# Late fusion of two unimodal prediction files; nothing is trained. Run it once per text
+# reference: the default pairs text_mlp with image_mlp; for TF-IDF or fine-tuned BERT,
+# `text.method=tfidf_logreg name=late_calibrated_tfidf sum_name=null`.
+name: late_calibrated
+sum_name: late_sum  # raw-logit sum (as in the reference repository); null to skip
+outputs_dir: outputs
+val_ids: splits/val_ids.txt
+seeds: [0, 1, 2]
+
+# `features` is only read for the *_mean ablation, through the head checkpoint of `method`.
+image:
+  method: image_mlp
+  condition: image_only
+  features: ${paths.features_dir}/image/vit_b_16_swag
+text:
+  method: text_mlp
+  condition: text_only
+  features: ${paths.features_dir}/text/bert-base-uncased
+
+hydra:
+  run:
+    dir: outputs/${name}/${now:%Y-%m-%d}/${now:%H-%M-%S}

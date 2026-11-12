@@ -30,6 +30,7 @@ just extract-image # ViT-B/16 pooled + 8x8 grid features
 just train-image-mlp # image baseline: MLP on frozen ViT
 just evaluate      # score every prediction file (outputs/results/)
 just train-cross-attention  # search lr/wd, then 3 seeds + test ablations
+just train-late-fusion      # calibrated late fusion of the text and image MLPs
 just train-tfidf   # text baseline: TF-IDF + logistic regression
 just train-text-mlp # text baseline: MLP on frozen BERT
 uv run pre-commit install   # once after cloning

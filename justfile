@@ -74,3 +74,8 @@ evaluate *ARGS:
 # val/test predictions with the ablations; `lr=1e-3 weight_decay=1e-2` skips the search
 train-cross-attention *ARGS:
     uv run python -m recipe_fusion.models.cross_attention {{ARGS}}
+
+# Late fusion of text_mlp and image_mlp predictions (calibrated on val, nothing trained);
+# `text.method=tfidf_logreg name=late_calibrated_tfidf sum_name=null` for another text reference
+train-late-fusion *ARGS:
+    uv run python -m recipe_fusion.models.late_fusion {{ARGS}}
