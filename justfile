@@ -19,6 +19,13 @@ fmt:
 typecheck:
     uv run basedpyright
 
+# Text references (sheet B2): TF-IDF + logistic regression, and the MLP head on frozen BERT
+train-tfidf *ARGS:
+    uv run python -m recipe_fusion.models.tfidf_logreg {{ARGS}}
+
+train-text-mlp *ARGS:
+    uv run python -m recipe_fusion.models.text_mlp {{ARGS}}
+
 extract-text *overrides:
     uv run python -m recipe_fusion.features.text {{overrides}}
 
@@ -57,3 +64,8 @@ train-image-mlp *ARGS:
 # Score every prediction file with the shared metrics; `just evaluate split=test` for the final table
 evaluate *ARGS:
     uv run python -m recipe_fusion.evaluate {{ARGS}}
+
+# Cross-attention fusion: search (lr, weight decay) on seed 0, then train seeds 0-2 and write
+# val/test predictions with the ablations; `lr=1e-3 weight_decay=1e-2` skips the search
+train-cross-attention *ARGS:
+    uv run python -m recipe_fusion.models.cross_attention {{ARGS}}

@@ -1,0 +1,16 @@
+# @package _global_
+defaults:
+  - /paths: default
+  - _self_
+
+method: tfidf_logreg
+condition: text_only
+val_ids: splits/val_ids.txt
+outputs_dir: outputs
+seeds: [0, 1, 2]  # the fit is deterministic: the same logits are written for each seed
+c_grid: [1.0, 10.0, 100.0]
+max_iter: 1000
+
+hydra:
+  run:
+    dir: outputs/tfidf_logreg/${now:%Y-%m-%d}/${now:%H-%M-%S}
