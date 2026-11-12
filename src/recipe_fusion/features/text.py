@@ -5,7 +5,6 @@ Writes the feature cache of contract 2.2 to ``data/features/text/<encoder>/``.
 
 from __future__ import annotations
 
-import html
 import json
 import math
 import re
@@ -25,6 +24,7 @@ from omegaconf import DictConfig
 from tqdm import tqdm
 from transformers import AutoModel, AutoTokenizer
 
+from recipe_fusion.data.clean import clean_title
 from recipe_fusion.data.upmc import read_split
 from recipe_fusion.features.cache import write_features
 from recipe_fusion.seed import pick_device
@@ -35,8 +35,8 @@ _RESIDUAL = re.compile(r"&#?\w+;|\\x[0-9a-fA-F]{2}")
 
 
 def preprocess(title: str) -> str:
-    """Only allowed preprocessing: the text stays as the model will see it."""
-    return html.unescape(title).strip()
+    """The shared title cleaning; every text model must use the same one."""
+    return clean_title(title)
 
 
 def round_up(x: float, multiple: int = 8) -> int:
@@ -155,7 +155,7 @@ def run(
         "L": max_len,
         "length_percentile": pct,
         "train_length_at_percentile": p_val,
-        "preprocessing": "html.unescape(title).strip()",
+        "preprocessing": "recipe_fusion.data.clean.clean_title",
         "pooling": "masked mean of last_hidden_state, [CLS]/[SEP] included",
         "batch_size": batch_size,
         "dtype": "float16",
