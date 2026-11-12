@@ -19,6 +19,9 @@ fmt:
 typecheck:
     uv run basedpyright
 
+extract-text *overrides:
+    uv run python -m recipe_fusion.features.text {{overrides}}
+
 # All checks run before a commit or a PR
 check: lint typecheck test
 
@@ -38,6 +41,14 @@ download *ARGS:
 # Draw the validation split once (splits/val_ids.txt, committed); needs the title files
 make-split *ARGS:
     uv run python -m recipe_fusion.data.split {{ARGS}}
+
+# Fully decode every dataset image; the report goes under outputs/check-images/
+check-images *ARGS:
+    uv run python -m recipe_fusion.features.image {{ARGS}}
+
+# Extract ViT-B/16 pooled and 8x8 grid features; Hydra overrides go after the recipe name
+extract-image *ARGS:
+    uv run python -m recipe_fusion.features.extract_image {{ARGS}}
 
 # Score every prediction file with the shared metrics; `just evaluate split=test` for the final table
 evaluate *ARGS:
