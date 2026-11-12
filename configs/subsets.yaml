@@ -3,10 +3,11 @@ defaults:
   - _self_
 
 val_ids: splits/val_ids.txt
-# {val,test}_{title_seen,title_unseen,no_class_name}.txt, committed to git.
+# {val,test}_<subset>.txt, committed to git.
 out_dir: splits
 report: outputs/subsets/report.json
 # Hash every image to find byte-identical copies across splits (reads ~8 GB once).
+# Needed for the image_* and unseen subsets that evaluate.yaml reports.
 check_images: true
 
 hydra:

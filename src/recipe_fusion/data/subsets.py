@@ -7,7 +7,10 @@ enough:
 
 - ``title_seen`` / ``title_unseen``: the title (case and accents folded) does / does not occur
   in the training part the models are fitted on (official train minus validation);
-- ``no_class_name``: the title does not contain the class name.
+- ``no_class_name``: the title does not contain the class name;
+- ``image_seen`` / ``image_unseen``: the image file is / is not byte-identical to a training
+  image (``check_images: true``);
+- ``unseen``: neither the title nor the image occurs in training.
 
 Run with ``just make-subsets``. The id files land in ``splits/`` and are committed; they depend
 only on the titles and the frozen validation split. The report (counts, how often a seen title
@@ -110,6 +113,19 @@ def image_duplicates(
     return found
 
 
+def image_subsets(
+    samples: Sequence[Sample], members: Mapping[str, Sequence[str]], duplicated: set[str]
+) -> dict[str, list[str]]:
+    """``image_seen`` / ``image_unseen`` and ``unseen`` (neither title nor image seen)."""
+    title_unseen = set(members["title_unseen"])
+    ids = [s.image_name for s in samples]
+    return {
+        "image_seen": [i for i in ids if i in duplicated],
+        "image_unseen": [i for i in ids if i not in duplicated],
+        "unseen": [i for i in ids if i not in duplicated and i in title_unseen],
+    }
+
+
 def split_report(
     samples: Sequence[Sample],
     members: Mapping[str, Sequence[str]],
@@ -145,21 +161,26 @@ def make_subsets(cfg: DictConfig) -> dict[str, object]:
     }
     for split, samples in by_split.items():
         members = subsets(samples, labels)
+        if cfg.check_images:
+            dups = image_duplicates(root, train, samples)
+            members.update(image_subsets(samples, members, {str(d["id"]) for d in dups}))
+            same_label = sum(bool(d["same_label"]) for d in dups)
+            report[f"{split}_image_duplicates"] = {
+                "n": len(dups),
+                "same_label": same_label,
+                "examples": dups[:20],
+            }
+            log.info(
+                "%s: %d images identical to a training image, %d with the same class",
+                split,
+                len(dups),
+                same_label,
+            )
         for name, ids in members.items():
             write_ids(out_dir / f"{split}_{name}.txt", ids, overwrite=True)
         stats = split_report(samples, members, labels)
         report[split] = stats
         log.info("%s: %s", split, json.dumps(stats))
-
-    if cfg.check_images:
-        for split, samples in by_split.items():
-            dups = image_duplicates(root, train, samples)
-            report[f"{split}_image_duplicates"] = {
-                "n": len(dups),
-                "same_label": sum(bool(d["same_label"]) for d in dups),
-                "examples": dups[:20],
-            }
-            log.info("%s: %d images byte-identical to a training image", split, len(dups))
 
     report_path = Path(to_absolute_path(cfg.report))
     report_path.parent.mkdir(parents=True, exist_ok=True)

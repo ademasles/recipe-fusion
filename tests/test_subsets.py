@@ -9,6 +9,7 @@ from recipe_fusion.data.split import read_ids
 from recipe_fusion.data.subsets import (
     generic_titles,
     image_duplicates,
+    image_subsets,
     lookup_accuracy,
     make_subsets,
     subsets,
@@ -121,6 +122,9 @@ def test_make_subsets_writes_files_and_report(
     report = json.loads((tmp_path / "report.json").read_text())
     assert report["test"]["lookup_top1_on_title_seen"] == 1.0
     assert report["test_image_duplicates"]["n"] == 1
+    assert read_ids(splits / "test_image_seen.txt") == ["b.jpg"]
+    assert read_ids(splits / "test_image_unseen.txt") == ["a.jpg"]
+    assert read_ids(splits / "test_unseen.txt") == []
     assert report["train_titles"]["distinct"] == 2
 
 
@@ -130,5 +134,15 @@ def test_evaluate_config_points_to_the_split_subsets(split: str) -> None:
         cfg = compose(config_name="evaluate", overrides=[f"split={split}"])
     assert dict(cfg.subsets) == {
         name: f"splits/{split}_{name}.txt"
-        for name in ("title_seen", "title_unseen", "no_class_name")
+        for name in ("title_seen", "title_unseen", "no_class_name", "image_unseen", "unseen")
+    }
+
+
+def test_image_subsets_combine_title_and_image() -> None:
+    samples = [Sample(f"{c}.jpg", c, "bagel", "test") for c in "abc"]
+    members = {"title_unseen": ["b.jpg", "c.jpg"]}
+    assert image_subsets(samples, members, {"c.jpg"}) == {
+        "image_seen": ["c.jpg"],
+        "image_unseen": ["a.jpg", "b.jpg"],
+        "unseen": ["b.jpg"],
     }

@@ -13,6 +13,8 @@ subsets:
   title_seen: splits/${split}_title_seen.txt
   title_unseen: splits/${split}_title_unseen.txt
   no_class_name: splits/${split}_no_class_name.txt
+  image_unseen: splits/${split}_image_unseen.txt
+  unseen: splits/${split}_unseen.txt
 
 hydra:
   run:
