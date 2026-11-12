@@ -1,0 +1,37 @@
+# @package _global_
+defaults:
+  - /paths: default
+  - _self_
+
+text_features: ${paths.features_dir}/text/bert-base-uncased
+image_features: ${paths.features_dir}/image/vit_b_16_swag
+val_ids: splits/val_ids.txt
+preds_dir: outputs/preds
+ckpt_dir: outputs/ckpt
+search_dir: outputs/search/cross_attention
+device: auto
+
+model:
+  d_model: 256
+  heads: 4
+  layers: 1
+  dropout: 0.1
+  head_hidden: 512
+  head_dropout: 0.3
+
+# Protocol 2.4. Leave lr and weight_decay null to run the 6-point search with seed 0 first;
+# set both (e.g. lr=1e-3 weight_decay=1e-2) to skip it and train the seeds directly.
+protocol:
+  batch_size: 256
+  max_epochs: 50
+  patience: 5
+search:
+  lr: [3e-4, 1e-3, 3e-3]
+  weight_decay: [1e-4, 1e-2]
+lr: null
+weight_decay: null
+seeds: [0, 1, 2]
+
+hydra:
+  run:
+    dir: outputs/train/cross_attention/${now:%Y-%m-%d}/${now:%H-%M-%S}
