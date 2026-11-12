@@ -1,7 +1,7 @@
 # @package _global_
 
 defaults:
-  - /paths@_global_: default
+  - /paths: default
   - _self_
 
 extract:

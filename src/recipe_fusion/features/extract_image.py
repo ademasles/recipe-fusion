@@ -10,6 +10,7 @@ import numpy as np
 import numpy.typing as npt
 import torch
 import torch.nn.functional as functional
+from hydra.utils import to_absolute_path
 from omegaconf import DictConfig
 from PIL import Image
 from torch import Tensor, nn
@@ -18,7 +19,7 @@ from tqdm import tqdm
 
 from recipe_fusion.data.upmc import SPLITS, Sample, read_split
 from recipe_fusion.features.cache import write_features
-from recipe_fusion.features.image import check_images, write_report
+from recipe_fusion.features.text import git_commit
 from recipe_fusion.seed import pick_device
 
 log = logging.getLogger(__name__)
@@ -134,7 +135,7 @@ def encode(
                 images = images.to(device, non_blocking=device.type == "cuda")
                 with torch.autocast(
                     device_type="cuda",
-                    dtype=torch.float16,
+                    dtype=torch.bfloat16,
                     enabled=device.type == "cuda",
                 ):
                     features = model(images)
@@ -193,13 +194,20 @@ def extract_split(
                 "format": "2.2",
                 "encoder": ENCODER_NAME,
                 "weights": "ViT_B_16_Weights.IMAGENET1K_SWAG_E2E_V1",
+                "d": FEATURE_DIM,
+                "L": TOKENS_PER_IMAGE,
+                "pooled": "CLS token after the final LayerNorm",
+                "grid": f"{GRID_SIZE}x{GRID_SIZE} avg-pool of the "
+                f"{PATCH_GRID_SIZE}x{PATCH_GRID_SIZE} patch tokens",
                 "preprocessing": "weights.transforms()",
+                "autocast": "bfloat16" if device.type == "cuda" else "none",
+                "dtype": "float16",
+                "git_commit": git_commit(),
                 "device": str(device),
-                "duration_seconds": elapsed,
+                "extraction_seconds": round(elapsed, 2),
                 "batch_size": current_batch_size,
                 "num_workers": num_workers,
-                "pooled_shape": list(pooled.shape),
-                "tokens_shape": list(tokens.shape),
+                "n": len(samples),
             }
             write_features(output, split, ids, pooled, tokens=tokens, mask=mask, meta=metadata)
             grid_writer.close()
@@ -237,14 +245,10 @@ def load_encoder() -> tuple[nn.Module, Callable[[Image.Image], Tensor]]:
     return model, weights.transforms()
 
 
-def extract(cfg: DictConfig, report_directory: Path) -> None:
-    root = Path(cfg.paths.upmc_dir)
-    output = Path(cfg.paths.features_dir) / "image" / ENCODER_NAME
-    issues = check_images(root)
-    write_report(issues, report_directory / "image_issues.csv")
-    if issues:
-        raise RuntimeError(f"found {len(issues)} image integrity issue(s); see the image report")
-
+def extract(cfg: DictConfig) -> None:
+    """Extract every split. Run ``just check-images`` first: a bad image stops the run."""
+    root = Path(to_absolute_path(cfg.paths.upmc_dir))
+    output = Path(to_absolute_path(cfg.paths.features_dir)) / "image" / ENCODER_NAME
     device = pick_device(str(cfg.extract.device))
     model, transform = load_encoder()
     for split in SPLITS:
@@ -265,9 +269,7 @@ def extract(cfg: DictConfig, report_directory: Path) -> None:
 
 @hydra.main(version_base=None, config_path="../../../configs", config_name="features/image")
 def main(cfg: DictConfig) -> None:
-    from hydra.core.hydra_config import HydraConfig
-
-    extract(cfg, Path(HydraConfig.get().runtime.output_dir))
+    extract(cfg)
 
 
 if __name__ == "__main__":

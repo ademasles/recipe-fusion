@@ -2,14 +2,18 @@ import csv
 from pathlib import Path
 
 import numpy as np
+import pytest
 import torch
+from hydra import compose, initialize_config_dir
 from PIL import Image
 from torch import Tensor, nn
 
 from recipe_fusion.data.upmc import read_split
 from recipe_fusion.features.cache import read_features
 from recipe_fusion.features.extract_image import extract_split
-from recipe_fusion.features.image import check_images
+from recipe_fusion.features.image import ImageIssue, check_images, write_report
+
+CONFIGS = Path(__file__).resolve().parents[1] / "configs"
 
 
 class TinyEncoder(nn.Module):
@@ -58,8 +62,6 @@ def test_check_images_finds_truncated_and_missing_images(tmp_path: Path) -> None
 
 
 def test_write_report_creates_csv(tmp_path: Path) -> None:
-    from recipe_fusion.features.image import ImageIssue, write_report
-
     report = tmp_path / "image_issues.csv"
     write_report([ImageIssue(tmp_path / "missing.jpg", "missing", "not found")], report)
 
@@ -116,6 +118,18 @@ def test_extract_split_writes_pooled_and_grid_features_on_cpu(tmp_path: Path) ->
     assert features.mask.dtype == np.bool_
     assert features.mask.all()
     assert features.meta["format"] == "2.2"
-    assert features.meta["duration_seconds"] > 0
+    assert features.meta["extraction_seconds"] >= 0
+    assert (features.meta["d"], features.meta["L"]) == (768, 64)
     assert np.isfinite(features.pooled).all()
     assert np.isfinite(features.tokens).all()
+
+
+def test_extract_config_follows_f101_data_dir(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("F101_DATA_DIR", str(tmp_path))
+    with initialize_config_dir(config_dir=str(CONFIGS), version_base=None):
+        cfg = compose(config_name="features/image")
+    assert cfg.paths.upmc_dir == f"{tmp_path}/upmc-food101"
+    assert cfg.paths.features_dir == f"{tmp_path}/features"
+    assert cfg.extract.batch_size == 64
