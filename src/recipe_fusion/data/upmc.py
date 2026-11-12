@@ -6,7 +6,7 @@ Layout of the Kaggle copy (``gianmarco96/upmcfood101``, version 1)::
     images/{train,test}/<class>/<file>.jpg
 
 Titles are kept exactly as they are stored: they still contain HTML entities such as
-``&#8217;``. Cleaning them is a preprocessing choice left to the experiments.
+``&#8217;``. Every text model cleans them with :func:`recipe_fusion.data.clean.clean_title`.
 """
 
 import csv
