@@ -7,9 +7,12 @@ split: val
 val_ids: splits/val_ids.txt
 preds_dir: outputs/preds
 results_dir: outputs/results
-# Extra subsets reported next to "all": name -> file of image ids, one per line,
-# e.g. title_unseen: splits/test_title_unseen.txt
-subsets: {}
+# Extra subsets reported next to "all": name -> file of image ids, one per line.
+# Written by `just make-subsets`; `subsets=null` scores "all" only.
+subsets:
+  title_seen: splits/${split}_title_seen.txt
+  title_unseen: splits/${split}_title_unseen.txt
+  no_class_name: splits/${split}_no_class_name.txt
 
 hydra:
   run:
