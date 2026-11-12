@@ -1,6 +1,6 @@
 import pytest
 
-from recipe_fusion.data.clean import clean_title
+from recipe_fusion.data.clean import clean_title, mentions_class
 
 
 @pytest.mark.parametrize(
@@ -23,3 +23,16 @@ def test_clean_title(raw: str, clean: str) -> None:
 def test_clean_title_is_idempotent() -> None:
     raw = "Mom&amp;amp;rsquo;s \\xe2\\x84\\xa2"
     assert clean_title(clean_title(raw)) == clean_title(raw)
+
+
+@pytest.mark.parametrize(
+    ("title", "label", "expected"),
+    [
+        ("Apple Pie Recipe", "apple_pie", True),
+        ("Grandma's dessert", "apple_pie", False),
+        ("BEST&amp;nbsp;Apple  Pie", "apple_pie", True),
+        ("Cr\\xc3\\xa8me Br\\xc3\\xbbl\\xc3\\xa9e", "creme_brulee", True),
+    ],
+)
+def test_mentions_class(title: str, label: str, expected: bool) -> None:
+    assert mentions_class(title, label) is expected

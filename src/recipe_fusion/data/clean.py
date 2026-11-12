@@ -7,6 +7,7 @@ Every text model must see the same cleaned string, so they all call :func:`clean
 
 import html
 import re
+import unicodedata
 
 _ESCAPED_BYTES = re.compile(r"(?:\\x[0-9a-fA-F]{2})+")
 _MAX_UNESCAPE_PASSES = 3
@@ -29,3 +30,17 @@ def clean_title(title: str) -> str:
         title = unescaped
     title = _ESCAPED_BYTES.sub(_decode_bytes, title)
     return " ".join(title.split())
+
+
+def mentions_class(title: str, label: str) -> bool:
+    """Whether the class name (``apple_pie`` -> ``apple pie``) appears in the cleaned title.
+
+    Case and accents are ignored, so ``Crème Brûlée`` mentions ``creme_brulee``. Titles
+    without it form the ``no_class_name`` subset reported by ``evaluate``.
+    """
+    return label.replace("_", " ").lower() in _fold(clean_title(title))
+
+
+def _fold(text: str) -> str:
+    decomposed = unicodedata.normalize("NFKD", text.lower())
+    return "".join(c for c in decomposed if not unicodedata.combining(c))
