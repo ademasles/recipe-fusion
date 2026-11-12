@@ -24,7 +24,7 @@ train-tfidf *ARGS:
     uv run python -m recipe_fusion.models.tfidf_logreg {{ARGS}}
 
 train-text-mlp *ARGS:
-    uv run python -m recipe_fusion.models.text_mlp {{ARGS}}
+    uv run python -m recipe_fusion.models.pooled_mlp {{ARGS}}
 
 extract-text *overrides:
     uv run python -m recipe_fusion.features.text {{overrides}}
@@ -57,9 +57,9 @@ check-images *ARGS:
 extract-image *ARGS:
     uv run python -m recipe_fusion.features.extract_image {{ARGS}}
 
-# Train the frozen-image MLP head; requires cached image features and splits/val_ids.txt
+# Image reference: MLP on frozen ViT pooled features (same protocol 2.4 code as train-text-mlp)
 train-image-mlp *ARGS:
-    uv run python -m recipe_fusion.train_image_mlp {{ARGS}}
+    uv run python -m recipe_fusion.models.pooled_mlp --config-name train/image_mlp {{ARGS}}
 
 # Score every prediction file with the shared metrics; `just evaluate split=test` for the final table
 evaluate *ARGS:

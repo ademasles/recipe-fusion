@@ -1,4 +1,9 @@
-"""Text reference: MLP head on frozen BERT pooled features (sheet B2 b, method ``text_mlp``).
+"""Unimodal references: MLP head on one frozen pooled feature cache.
+
+The same code serves both modalities, so they differ only by their features:
+
+- ``text_mlp`` (sheet B2 b): BERT pooled vectors, ``just train-text-mlp``;
+- ``image_mlp`` (sheet C2): ViT CLS vectors, ``just train-image-mlp``.
 
 Protocol 2.4: grid over (lr, weight decay) with seed 0, keep the best validation top-1, then
 retrain that configuration with seeds 0, 1 and 2. Validation predictions and a checkpoint are
@@ -33,7 +38,7 @@ log = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
-class TextData:
+class PooledData:
     classes: list[str]
     x_train: np.ndarray
     y_train: np.ndarray
@@ -58,12 +63,12 @@ def rows(features: Features, ids: Sequence[str]) -> np.ndarray:
     return np.asarray(features.pooled[[position[image_id] for image_id in ids]])
 
 
-def load_text_data(splits: Splits, features_dir: Path) -> TextData:
+def load_pooled_data(splits: Splits, features_dir: Path) -> PooledData:
     f_train = read_aligned(features_dir, "train", splits.train_all)
     f_test = read_aligned(features_dir, "test", splits.test)
     ids_train = [s.image_name for s in splits.train]
     ids_val = [s.image_name for s in splits.val]
-    return TextData(
+    return PooledData(
         classes=splits.classes,
         x_train=rows(f_train, ids_train),
         y_train=labels_for(ids_train, splits.train_all, splits.classes),
@@ -82,7 +87,7 @@ def best_config(trials: list[dict[str, Any]]) -> dict[str, Any]:
 
 def train_one(
     cfg: DictConfig,
-    data: TextData,
+    data: PooledData,
     *,
     lr: float,
     weight_decay: float,
@@ -116,7 +121,7 @@ def train_one(
     return model, result
 
 
-def run(cfg: DictConfig, data: TextData, device: torch.device) -> dict[str, Any]:
+def run(cfg: DictConfig, data: PooledData, device: torch.device) -> dict[str, Any]:
     outputs = Path(to_absolute_path(cfg.outputs_dir))
     method, condition = str(cfg.method), str(cfg.condition)
     n_classes = len(data.classes)
@@ -193,7 +198,7 @@ def main(cfg: DictConfig) -> None:
     splits = load_splits(
         Path(to_absolute_path(cfg.paths.upmc_dir)), Path(to_absolute_path(cfg.val_ids))
     )
-    data = load_text_data(splits, Path(to_absolute_path(cfg.features)))
+    data = load_pooled_data(splits, Path(to_absolute_path(cfg.features)))
     summary = run(cfg, data, pick_device(str(cfg.device)))
     out_dir = Path(HydraConfig.get().runtime.output_dir)
     (out_dir / "summary.json").write_text(json.dumps(summary, indent=2) + "\n", encoding="utf-8")

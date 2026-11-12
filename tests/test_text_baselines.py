@@ -8,7 +8,7 @@ from omegaconf import DictConfig
 from recipe_fusion.data.loading import Splits, load_splits
 from recipe_fusion.data.upmc import Sample
 from recipe_fusion.features.cache import write_features
-from recipe_fusion.models import text_mlp, tfidf_logreg
+from recipe_fusion.models import pooled_mlp, tfidf_logreg
 from recipe_fusion.models.heads import load_head
 from recipe_fusion.preds import ckpt_path, preds_path
 
@@ -55,10 +55,10 @@ def test_read_aligned_checks_ids_and_rows_follow_requested_order(tmp_path) -> No
     pooled = np.arange(12, dtype=np.float16).reshape(3, 4)
     write_features(tmp_path, "train", [s.image_name for s in samples], pooled)
 
-    features = text_mlp.read_aligned(tmp_path, "train", samples)
-    np.testing.assert_array_equal(text_mlp.rows(features, ["z.jpg", "x.jpg"]), pooled[[2, 0]])
+    features = pooled_mlp.read_aligned(tmp_path, "train", samples)
+    np.testing.assert_array_equal(pooled_mlp.rows(features, ["z.jpg", "x.jpg"]), pooled[[2, 0]])
     with pytest.raises(ValueError, match="ids"):
-        text_mlp.read_aligned(tmp_path, "train", samples[::-1])
+        pooled_mlp.read_aligned(tmp_path, "train", samples[::-1])
 
 
 def test_best_config_prefers_top1_then_lower_loss() -> None:
@@ -67,7 +67,7 @@ def test_best_config_prefers_top1_then_lower_loss() -> None:
         {"val_top1": 0.9, "val_loss": 0.7},
         {"val_top1": 0.9, "val_loss": 0.5},
     ]
-    assert text_mlp.best_config(trials) is trials[2]
+    assert pooled_mlp.best_config(trials) is trials[2]
 
 
 def test_tfidf_logreg_writes_the_same_preds_for_every_seed(tmp_path) -> None:
@@ -93,7 +93,7 @@ def test_tfidf_logreg_writes_the_same_preds_for_every_seed(tmp_path) -> None:
     assert test["logits"].shape == (len(splits.test), 3)
 
 
-def make_text_data() -> text_mlp.TextData:
+def make_text_data() -> pooled_mlp.PooledData:
     rng = np.random.default_rng(0)
 
     def block(n_per_class: int) -> tuple[np.ndarray, np.ndarray]:
@@ -105,7 +105,7 @@ def make_text_data() -> text_mlp.TextData:
     x_train, y_train = block(30)
     x_val, y_val = block(10)
     x_test, _ = block(5)
-    return text_mlp.TextData(
+    return pooled_mlp.PooledData(
         classes=CLASSES,
         x_train=x_train,
         y_train=y_train,
@@ -129,7 +129,7 @@ def test_text_mlp_sweeps_then_writes_final_outputs(tmp_path) -> None:
             "train": {"batch_size": 32, "max_epochs": 5, "patience": 2},
         }
     )
-    summary = text_mlp.run(cfg, make_text_data(), torch.device("cpu"))
+    summary = pooled_mlp.run(cfg, make_text_data(), torch.device("cpu"))
     assert len(summary["trials"]) == 4
     assert summary["chosen"] in summary["trials"]
     for seed in (0, 1):
