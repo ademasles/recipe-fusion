@@ -2,7 +2,8 @@
 
 AdamW, batch 256, at most 50 epochs, early stopping on the validation loss (patience 5),
 keeping the best validation point. A model is any ``nn.Module`` whose ``forward`` takes
-the tensors of a batch as keyword arguments and returns logits.
+the tensors of a batch as keyword arguments and returns logits. Predictions are written
+with :mod:`recipe_fusion.preds`.
 """
 
 import copy
@@ -10,7 +11,6 @@ import logging
 import math
 from collections.abc import Iterator, Mapping
 from dataclasses import dataclass, field
-from pathlib import Path
 from typing import Protocol
 
 import numpy as np
@@ -30,6 +30,19 @@ class Batches(Protocol):
     def get(self, rows: npt.NDArray[np.int64]) -> dict[str, Tensor]: ...
 
 
+class ArrayBatches:
+    """In-memory (or memory-mapped) rows of one array, served as ``{"x": tensor}``."""
+
+    def __init__(self, x: np.ndarray) -> None:
+        self.x = x
+
+    def __len__(self) -> int:
+        return len(self.x)
+
+    def get(self, rows: npt.NDArray[np.int64]) -> dict[str, Tensor]:
+        return {"x": torch.from_numpy(np.ascontiguousarray(self.x[rows]))}
+
+
 @dataclass(frozen=True)
 class TrainConfig:
     lr: float
@@ -45,6 +58,10 @@ class FitResult:
     val_loss: float
     val_top1: float
     history: list[dict[str, float]] = field(default_factory=list)
+
+    @property
+    def epochs_run(self) -> int:
+        return len(self.history)
 
 
 def _to_device(batch: Mapping[str, Tensor], device: torch.device) -> dict[str, Tensor]:
@@ -105,7 +122,12 @@ def fit(
     device: torch.device,
     seed: int,
 ) -> FitResult:
-    """Train with protocol 2.4 and leave ``model`` at its best validation epoch."""
+    """Train with protocol 2.4 and leave ``model`` at its best validation epoch.
+
+    Call ``seed_everything(seed)`` before building ``model``.
+    """
+    if cfg.max_epochs < 1:
+        raise ValueError("max_epochs must be >= 1")
     model.to(device)
     optimizer = torch.optim.AdamW(model.parameters(), lr=cfg.lr, weight_decay=cfg.weight_decay)
     rng = np.random.default_rng(seed)
@@ -154,9 +176,3 @@ def fit(
     assert best is not None
     best.history = history
     return best
-
-
-def write_preds(path: Path, ids: list[str], logits: np.ndarray) -> None:
-    """Predictions in format 2.3: ``ids`` and float32 ``logits`` (N, n_classes)."""
-    path.parent.mkdir(parents=True, exist_ok=True)
-    np.savez(path, ids=np.array(ids), logits=logits.astype(np.float32))
