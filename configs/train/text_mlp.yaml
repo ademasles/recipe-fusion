@@ -28,4 +28,4 @@ train:
 
 hydra:
   run:
-    dir: outputs/text_mlp/${now:%Y-%m-%d}/${now:%H-%M-%S}
+    dir: outputs/${method}/${now:%Y-%m-%d}/${now:%H-%M-%S}

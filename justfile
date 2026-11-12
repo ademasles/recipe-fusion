@@ -24,7 +24,7 @@ train-tfidf *ARGS:
     uv run python -m recipe_fusion.models.tfidf_logreg {{ARGS}}
 
 train-text-mlp *ARGS:
-    uv run python -m recipe_fusion.models.text_mlp {{ARGS}}
+    uv run python -m recipe_fusion.models.pooled_mlp {{ARGS}}
 
 extract-text *overrides:
     uv run python -m recipe_fusion.features.text {{overrides}}
@@ -56,6 +56,10 @@ check-images *ARGS:
 # Extract ViT-B/16 pooled and 8x8 grid features; Hydra overrides go after the recipe name
 extract-image *ARGS:
     uv run python -m recipe_fusion.features.extract_image {{ARGS}}
+
+# Image reference: MLP on frozen ViT pooled features (same protocol 2.4 code as train-text-mlp)
+train-image-mlp *ARGS:
+    uv run python -m recipe_fusion.models.pooled_mlp --config-name train/image_mlp {{ARGS}}
 
 # Score every prediction file with the shared metrics; `just evaluate split=test` for the final table
 evaluate *ARGS:
