@@ -31,3 +31,8 @@ checkpoints/
 !.vscode/settings.json
 !.vscode/extensions.json
 .DS_Store
+
+# Logs locaux
+extract.log
+nohup.out
+*.log

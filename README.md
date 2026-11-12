@@ -23,8 +23,9 @@ just sync        # create .venv from uv.lock
 just gpu         # check that PyTorch sees the GPU
 just check       # ruff + basedpyright + pytest
 just download    # UPMC Food-101 from Kaggle (8.3 GB)
-just check-images # fully decode dataset images and write a report under outputs/check-images/
-just extract-image # extract pooled and 8 x 8 ViT features
+just make-split  # validation split, once (already committed in splits/)
+just check-images  # fully decode every image; report under outputs/check-images/
+just extract-image # ViT-B/16 pooled + 8x8 grid features
 uv run pre-commit install   # once after cloning
 ```
 
@@ -62,8 +63,8 @@ uv tool install rust-just                         # just, distributed through uv
   without an account.
 - `texts/{train,test}_titles.csv`: no header, three columns (image file, title, class). Images
   in `images/{train,test}/<class>/<file>.jpg`.
-- 67,972 training pairs and 22,716 test pairs. There is no validation split: it has to be drawn
-  from the training set.
+- 67,972 training pairs and 22,716 test pairs. There is no official validation split: ours is
+  drawn once from the training set, stratified by class, and listed in `splits/val_ids.txt`.
 - Titles are kept as is, HTML entities included (`&#8217;`).
 
 ## Conventions

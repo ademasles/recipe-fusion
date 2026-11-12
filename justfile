@@ -19,6 +19,9 @@ fmt:
 typecheck:
     uv run basedpyright
 
+extract-text *overrides:
+    uv run python -m recipe_fusion.features.text {{overrides}}
+
 # All checks run before a commit or a PR
 check: lint typecheck test
 
@@ -33,12 +36,16 @@ kernel:
 # Download UPMC Food-101 from Kaggle (8.3 GB); Hydra overrides go after the recipe name,
 # e.g. `just download data.texts_only=true`
 download *ARGS:
-    PYTHONPATH=src uv run python -m recipe_fusion.data.download {{ARGS}}
+    uv run python -m recipe_fusion.data.download {{ARGS}}
 
-# Check every dataset image can be fully decoded; reports are written under outputs/check-images/
+# Draw the validation split once (splits/val_ids.txt, committed); needs the title files
+make-split *ARGS:
+    uv run python -m recipe_fusion.data.split {{ARGS}}
+
+# Fully decode every dataset image; the report goes under outputs/check-images/
 check-images *ARGS:
-    PYTHONPATH=src uv run python -m recipe_fusion.features.image {{ARGS}}
+    uv run python -m recipe_fusion.features.image {{ARGS}}
 
-# Extract pooled and 8x8 ViT features; Hydra overrides go after the recipe name
+# Extract ViT-B/16 pooled and 8x8 grid features; Hydra overrides go after the recipe name
 extract-image *ARGS:
-    PYTHONPATH=src uv run python -m recipe_fusion.features.extract_image {{ARGS}}
+    uv run python -m recipe_fusion.features.extract_image {{ARGS}}
