@@ -27,6 +27,7 @@ just make-split  # validation split, once (already committed in splits/)
 just check-images  # fully decode every image; report under outputs/check-images/
 just extract-image # ViT-B/16 pooled + 8x8 grid features
 just evaluate      # score every prediction file (outputs/results/)
+just train-cross-attention  # search lr/wd, then 3 seeds + test ablations
 uv run pre-commit install   # once after cloning
 ```
 
