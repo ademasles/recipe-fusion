@@ -49,6 +49,11 @@ download *ARGS:
 make-split *ARGS:
     uv run python -m recipe_fusion.data.split {{ARGS}}
 
+# Evaluation subsets (title seen/unseen in train, no class name) into splits/, plus the
+# duplicate report under outputs/subsets/
+make-subsets *ARGS:
+    uv run python -m recipe_fusion.data.subsets {{ARGS}}
+
 # Fully decode every dataset image; the report goes under outputs/check-images/
 check-images *ARGS:
     uv run python -m recipe_fusion.features.image {{ARGS}}

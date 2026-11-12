@@ -195,7 +195,9 @@ def split_ids_and_labels(cfg: DictConfig) -> tuple[list[str], np.ndarray, int]:
 
 def run_evaluation(cfg: DictConfig) -> list[dict[str, object]]:
     ids, labels, n_classes = split_ids_and_labels(cfg)
-    subsets = {name: read_ids(Path(to_absolute_path(path))) for name, path in cfg.subsets.items()}
+    subsets = {
+        name: read_ids(Path(to_absolute_path(path))) for name, path in (cfg.subsets or {}).items()
+    }
     runs = find_runs(Path(to_absolute_path(cfg.preds_dir)), cfg.split)
     if not runs:
         raise FileNotFoundError(f"no {cfg.split} predictions under {cfg.preds_dir}")

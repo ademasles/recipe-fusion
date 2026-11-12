@@ -124,6 +124,7 @@ def test_run_evaluation_on_validation_split(
                 f"val_ids={val_ids}",
                 f"preds_dir={preds}",
                 f"results_dir={tmp_path / 'results'}",
+                "subsets=null",
             ],
         )
     summary = run_evaluation(cfg)

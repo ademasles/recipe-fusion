@@ -38,7 +38,12 @@ def mentions_class(title: str, label: str) -> bool:
     Case and accents are ignored, so ``Crème Brûlée`` mentions ``creme_brulee``. Titles
     without it form the ``no_class_name`` subset reported by ``evaluate``.
     """
-    return label.replace("_", " ").lower() in _fold(clean_title(title))
+    return label.replace("_", " ").lower() in title_key(title)
+
+
+def title_key(title: str) -> str:
+    """Cleaned title with case and accents folded: two pages share a title iff keys match."""
+    return _fold(clean_title(title))
 
 
 def _fold(text: str) -> str:
