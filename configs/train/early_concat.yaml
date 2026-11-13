@@ -1,0 +1,34 @@
+# @package _global_
+defaults:
+  - /paths: default
+  - _self_
+
+method: early_concat
+device: auto
+text_features: ${paths.features_dir}/text/bert-base-uncased
+image_features: ${paths.features_dir}/image/vit_b_16_swag  # check against configs/features/image.yaml
+val_ids: splits/val_ids.txt
+outputs_dir: outputs
+seeds: [0, 1, 2]
+lr: null            # set lr and weight_decay to skip the search:
+weight_decay: null  # `just train-early-fusion lr=0.0003 weight_decay=0.01`
+ablation_seed: 0    # seed of the shuffles; fixed (not per training seed), as in cross_attention
+
+# Protocol 2.4: 6 trials with seed 0, then the best one with every seed.
+sweep:
+  seed: 0
+  lr: [0.0003, 0.001, 0.003]
+  weight_decay: [0.0001, 0.01]
+
+head:
+  hidden: 512
+  dropout: 0.3
+
+train:
+  batch_size: 256
+  max_epochs: 50
+  patience: 5
+
+hydra:
+  run:
+    dir: outputs/early_concat/${now:%Y-%m-%d}/${now:%H-%M-%S}
