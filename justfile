@@ -80,7 +80,7 @@ train-cross-attention *ARGS:
 train-late-fusion *ARGS:
     uv run python -m recipe_fusion.models.late_fusion {{ARGS}}
 
-# # Early fusion of the BERT and ViT pooled vectors (sheet B3) with the 4 ablations; same search
+# Early fusion of the BERT and ViT pooled vectors (sheet B3) with the 4 ablations; same search
 # and `lr=... weight_decay=...` shortcut as train-cross-attention
 train-early-fusion *ARGS:
     uv run python -m recipe_fusion.models.early_fusion {{ARGS}}
