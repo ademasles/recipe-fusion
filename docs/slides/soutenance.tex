@@ -1,0 +1,436 @@
+% Soutenance Projet 1 -- recipe-fusion (8 minutes, 9 diapositives + annexes)
+% Compilation : pdflatex soutenance.tex (deux passes), ou Overleaf avec pdfLaTeX.
+% Toutes les figures sont tracées ici à partir des résultats du dépôt
+% (outputs/results/test_summary.csv) : aucun fichier image n'est nécessaire.
+\documentclass[aspectratio=169,11pt]{beamer}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[french]{babel}
+\usepackage[sfdefault,scaled=.95]{FiraSans}
+\usepackage[scaled=.9]{FiraMono}
+\usepackage{booktabs}
+\usepackage{fontawesome5}
+\usepackage{appendixnumberbeamer}
+\usepackage{tikz}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.18}
+\usetikzlibrary{positioning,calc,arrows.meta}
+% La bibliothèque TikZ « babel » casse pgfplots ici : on coupe plutôt les
+% raccourcis actifs du français, qui gênent la syntaxe TikZ (fus!55, |-, etc.).
+\AtBeginDocument{\shorthandoff{;:!?}}
+
+\usetheme[progressbar=frametitle,numbering=fraction]{metropolis}
+
+% ---------------------------------------------------------------- à compléter
+\newcommand{\auteurs}{Anton Demasles \quad·\quad Abel De Muizon \quad·\quad Esteban Tarin}
+% Exemple de la diapositive 2 : placer une vraie image du jeu de données dans
+% exemple.jpg (à côté de ce fichier) et recopier son vrai titre ci-dessous.
+\newcommand{\exempletitre}{Grandma's Apple Pie Recipe}
+\newcommand{\exempleclasse}{apple\_pie}
+
+% ------------------------------------------------------------------- couleurs
+\definecolor{txt}{HTML}{2B6CB0}   % texte
+\definecolor{img}{HTML}{DD6B20}   % image
+\definecolor{fus}{HTML}{0F766E}   % fusion
+\definecolor{acc}{HTML}{B91C1C}   % résultat mis en avant
+\definecolor{ink}{HTML}{23373B}
+\definecolor{mute}{HTML}{6B7280}
+\setbeamercolor{background canvas}{bg=white}
+\setbeamercolor{progress bar}{fg=fus,bg=fus!18}
+\setbeamercolor{alerted text}{fg=acc}
+\setbeamerfont{frametitle}{size=\large,series=\bfseries}
+
+\pgfplotsset{
+  every axis/.append style={
+    tick style={draw=none},
+    axis line style={draw=black!35},
+    label style={font=\small,text=ink},
+    tick label style={font=\small,text=ink},
+  },
+  valeurs/.style={
+    nodes near coords,
+    point meta=explicit symbolic,nodes near coords,
+    every node near coord/.append style={font=\scriptsize,text=ink},
+  },
+}
+\tikzset{
+  fleche/.style={-{Stealth[length=2mm]},thick,draw=mute},
+  boite/.style={draw=#1,fill=#1!10,rounded corners=3pt,minimum height=8.5mm,
+    inner xsep=6pt,font=\small,align=center,text=ink},
+  boite/.default=ink,
+  vec/.style={boite=#1,minimum width=1.55cm},
+  op/.style={boite=fus,minimum width=3.3cm},
+  sortie/.style={font=\scriptsize,text=mute},
+}
+
+\newcommand{\chiffre}[3][ink]{%
+  {\fontsize{26}{28}\selectfont\bfseries\color{#1}#2}\\[-1pt]{\small\color{mute}#3}}
+% \jauge{y}{fraction}{valeur}{libellé}{note}{couleur}
+\newcommand{\jauge}[6]{%
+  \node[anchor=west,inner sep=0,text=ink] at (0,#1+0.62) {#4};
+  \fill[black!8,rounded corners=2pt] (0,#1) rectangle (9.2,#1+0.34);
+  \fill[#6,rounded corners=2pt] (0,#1) rectangle ({9.2*#2},#1+0.34);
+  \node[anchor=west,font=\LARGE\bfseries,text=#6] at (9.6,#1+0.17) {#3};
+  \node[anchor=west,inner sep=0,font=\footnotesize,text=mute] at (0,#1-0.3) {#5};
+}
+
+\title{Texte + image : quelle fusion\\pour reconnaître un plat ?}
+\subtitle{Classification multimodale sur UPMC Food-101}
+\author{\auteurs}
+\date{19 novembre 2026}
+\institute{Mines Nancy · Deep learning avancé — Projet 1}
+\titlegraphic{\hfill\IfFileExists{logo_mines_nancy.png}{\includegraphics[height=2.2cm]{logo_mines_nancy.png}}{}}
+
+\begin{document}
+
+\maketitle
+
+% ============================================================== 1. Problème
+\begin{frame}{Une photo, un titre de page web, 101 plats}
+\begin{columns}[c,onlytextwidth]
+\begin{column}{0.44\textwidth}
+\centering
+\begin{tikzpicture}
+  \IfFileExists{exemple.jpg}%
+    {\node[draw=img,line width=1pt,inner sep=0pt] (im)
+       {\includegraphics[height=3.2cm]{exemple.jpg}};}%
+    {\node[draw=img,fill=img!8,rounded corners=3pt,minimum width=5.4cm,minimum height=2.7cm] (im)
+       {\fontsize{40}{40}\selectfont\color{img}\faImage};}
+  \node[boite=txt,below=3mm of im,minimum width=5.4cm] (ti) {\faFont\quad « \exempletitre »};
+  \node[boite=fus,below=6mm of ti,font=\ttfamily\small] (cl) {\exempleclasse};
+  \draw[fleche] (ti) -- (cl);
+\end{tikzpicture}
+\IfFileExists{exemple.jpg}{}{\\[1mm]{\scriptsize\color{mute}exemple schématique}}
+\end{column}
+\begin{column}{0.54\textwidth}
+\begin{tikzpicture}[stat/.style={anchor=north west,inner sep=0,align=left,text width=3.6cm}]
+  \node[stat] at (0,0)     {\chiffre{101}{classes de plats}};
+  \node[stat] at (3.9,0)   {\chiffre{90\,688}{paires image + titre}};
+  \node[stat] at (0,-1.75) {\chiffre[txt]{7 mots}{par titre (médiane)}};
+  \node[stat] at (3.9,-1.75) {\chiffre[img]{1 photo}{par page, non filtrée}};
+\end{tikzpicture}
+
+\vspace{1.4em}
+\begin{tikzpicture}[x=7.6cm,y=1cm]
+  \fill[ink!75] (0,0) rectangle (0.675,0.42);
+  \fill[ink!40] (0.675,0) rectangle (0.75,0.42);
+  \fill[acc!80] (0.75,0) rectangle (1,0.42);
+  \node[anchor=north west,inner sep=0,font=\scriptsize,text=ink] at (0,-0.1) {entraînement 61\,177};
+  \node[anchor=north,inner sep=0,font=\scriptsize,text=ink] at (0.7125,-0.1) {val.\ 6\,795};
+  \node[anchor=north east,inner sep=0,font=\scriptsize,text=acc] at (1,-0.1) {test 22\,716};
+\end{tikzpicture}
+\end{column}
+\end{columns}
+\end{frame}
+
+% ================================================================= 2. Fuite
+\begin{frame}{Le benchmark fuit : 4 titres de test sur 10 sont déjà vus}
+\centering
+\begin{tikzpicture}[x=1cm,y=1cm]
+  \jauge{3.1}{0.377}{37,7\,\%}{Titres de test déjà présents dans l'entraînement}
+        {une simple table « titre $\rightarrow$ classe » y atteint 92,6\,\%}{acc}
+  \jauge{1.55}{0.051}{5,1\,\%}{Images de test identiques à une image d'entraînement}
+        {octet pour octet ; 88\,\% portent la même classe}{acc}
+  \jauge{0}{0.736}{73,6\,\%}{Titres de test qui contiennent le nom du plat}
+        {le texte seul suffit alors presque toujours}{txt}
+\end{tikzpicture}
+
+\vspace{0.6em}
+{\small Chaque méthode est donc aussi évaluée sur deux sous-ensembles :\\[2pt]
+\textbf{jamais vu} (ni titre ni image, 61,5\,\% du test)\quad et\quad
+\textbf{sans nom du plat} (26,4\,\%).}
+\end{frame}
+
+% ============================================================= 3. Protocole
+\begin{frame}{Le même protocole pour toutes les méthodes}
+\centering
+\resizebox{\textwidth}{!}{%
+\begin{tikzpicture}[node distance=5mm and 6mm]
+  \node[boite=txt] (t) {\faFont\ \ Titre};
+  \node[boite=img,below=11mm of t] (i) {\faImage\ \ Image};
+  \node[boite=txt,right=of t] (bert) {BERT-base};
+  \node[boite=img,right=of i] (vit) {ViT-B/16};
+  \coordinate (milieu) at (barycentric cs:bert=1,vit=1);
+  \node[boite,anchor=west] (cache) at ([xshift=21mm]milieu) {Vecteurs\\en cache};
+  \node[boite=fus,right=of cache] (tetes) {Têtes et\\fusions};
+  \node[boite,right=of tetes] (preds) {Prédictions\\format commun};
+  \node[boite=acc,right=of preds] (eval) {Une seule\\évaluation};
+  \node[below=0.5mm of bert,font=\scriptsize,text=mute] {gelé ou fine-tuné};
+  \node[below=0.5mm of vit,font=\scriptsize,text=mute] {gelé, 384 px};
+  \draw[fleche] (t) -- (bert);
+  \draw[fleche] (i) -- (vit);
+  \draw[fleche] (bert.east) -- ++(0.35,0) |- (cache.west);
+  \draw[fleche] (vit.east) -- ++(0.35,0) |- (cache.west);
+  \draw[fleche] (cache) -- (tetes);
+  \draw[fleche] (tetes) -- (preds);
+  \draw[fleche] (preds) -- (eval);
+\end{tikzpicture}}
+
+\vspace{1.2em}
+\begin{tikzpicture}[regle/.style={text width=3.4cm,align=center,font=\small,text=ink,inner sep=2pt,execute at begin node={\hyphenpenalty=10000\exhyphenpenalty=10000}}]
+  \node[regle] (a) {{\Large\color{fus}\faLock}\\[3pt]Validation figée\\{\scriptsize\color{mute}10\,\% de l'entraînement, stratifiée}};
+  \node[regle,right=2mm of a] (b) {{\Large\color{fus}\faThLarge}\\[3pt]Grille fixée d'avance\\{\scriptsize\color{mute}choix sur la validation seulement}};
+  \node[regle,right=2mm of b] (c) {{\Large\color{fus}\faDice}\\[3pt]3 graines\\{\scriptsize\color{mute}moyenne $\pm$ écart-type}};
+  \node[regle,right=2mm of c] (d) {{\Large\color{fus}\faEye}\\[3pt]Test regardé une fois\\{\scriptsize\color{mute}aucun réglage ensuite}};
+\end{tikzpicture}
+\end{frame}
+
+% =============================================================== 4. Fusions
+\begin{frame}{Trois façons de fusionner texte et image}
+\begin{columns}[t,onlytextwidth]
+\begin{column}{0.32\textwidth}\centering
+\textbf{\color{fus}Précoce}\\[4pt]
+\begin{tikzpicture}
+  \node[vec=txt] (t) at (-0.9,2.5) {texte};
+  \node[vec=img] (i) at (0.9,2.5) {image};
+  \node[op] (c) at (0,1.25) {concaténation};
+  \node[op] (m) at (0,0.15) {MLP};
+  \node[sortie] (o) at (0,-0.75) {101 classes};
+  \draw[fleche] (t) -- (t|-c.north);
+  \draw[fleche] (i) -- (i|-c.north);
+  \draw[fleche] (c) -- (m);
+  \draw[fleche] (m) -- (o);
+\end{tikzpicture}\\[2pt]
+{\small on mélange dès l'entrée}
+\end{column}
+\begin{column}{0.32\textwidth}\centering
+\textbf{\color{fus}Attention croisée}\\[4pt]
+\begin{tikzpicture}
+  \node[vec=txt] (t) at (-0.9,2.5) {40 jetons};
+  \node[vec=img] (i) at (0.9,2.5) {64 zones};
+  \node[op] (c) at (0,1.25) {attention $\leftrightarrow$};
+  \node[op] (m) at (0,0.15) {moyenne + MLP};
+  \node[sortie] (o) at (0,-0.75) {101 classes};
+  \draw[fleche] (t) -- (t|-c.north);
+  \draw[fleche] (i) -- (i|-c.north);
+  \draw[fleche] (c) -- (m);
+  \draw[fleche] (m) -- (o);
+\end{tikzpicture}\\[2pt]
+{\small chaque mot regarde l'image,\\et inversement}
+\end{column}
+\begin{column}{0.34\textwidth}\centering
+\textbf{\color{fus}Tardive}\\[4pt]
+\begin{tikzpicture}
+  \node[vec=txt] (t) at (-0.9,2.5) {texte};
+  \node[vec=img] (i) at (0.9,2.5) {image};
+  \node[vec=txt] (et) at (-0.9,1.25) {expert};
+  \node[vec=img] (ei) at (0.9,1.25) {expert};
+  \node[op] (m) at (0,0.15) {moyenne pondérée};
+  \node[sortie] (o) at (0,-0.75) {101 classes};
+  \draw[fleche] (t) -- (et);
+  \draw[fleche] (i) -- (ei);
+  \draw[fleche] (et) -- (et|-m.north);
+  \draw[fleche] (ei) -- (ei|-m.north);
+  \draw[fleche] (m) -- (o);
+\end{tikzpicture}\\[2pt]
+{\small deux experts votent ;\\rien de plus à entraîner}
+\end{column}
+\end{columns}
+
+\vspace{0.7em}
+\centering{\footnotesize\color{mute}
+Tardive : $\alpha \log p_{\mathrm{image}} + (1-\alpha)\log p_{\mathrm{texte}}$,
+avec $\alpha$ et les températures choisis sur la validation.}
+\end{frame}
+
+% ============================================================== 5. Résultats
+\begin{frame}{La fusion la plus simple gagne}
+\centering
+\begin{tikzpicture}
+\begin{axis}[
+  width=11.2cm,height=6.5cm,
+  xmin=70,xmax=97,ymin=0.4,ymax=9.6,
+  axis x line*=bottom,axis y line*=left,y axis line style={draw=none},
+  ytick={1,...,9},
+  yticklabels={{Image seule (ViT gelé)},{Texte seul (BERT gelé)},{Texte seul (TF-IDF)},
+    {Texte seul (BERT fine-tuné)},{Fusion précoce},{Attention croisée},
+    {Tardive, BERT gelé + image},{Tardive, TF-IDF + image},{\textbf{Tardive, BERT fine-tuné + image}}},
+  xtick={70,75,...,95},
+  xlabel={Top-1 sur le test (\%)},
+  ymajorgrids,grid style={black!7},
+  clip=false,
+]
+  \draw[black!30] (axis cs:70,4.5) -- (axis cs:97,4.5);
+  \draw[mute,dashed] (axis cs:93.8,0.4) -- (axis cs:93.8,9.6)
+    node[anchor=south east,font=\scriptsize,text=mute,inner sep=2pt,align=right]
+    {référence publique 93,8\\(réglée sur le test, 1 graine)};
+  \addplot[only marks,mark=*,mark size=3pt,img] coordinates {(74.4,1)};
+  \addplot[only marks,mark=*,mark size=3pt,txt] coordinates {(83.7,2) (86.4,3) (86.5,4)};
+  \addplot[only marks,mark=*,mark size=3pt,fus] coordinates {(91.5,5) (92.6,6) (93.3,7) (94.5,8)};
+  \addplot[only marks,mark=*,mark size=4.2pt,acc] coordinates {(94.7,9)};
+  \foreach \x/\y/\v in {74.4/1/{74,4},83.7/2/{83,7},86.4/3/{86,4},86.5/4/{86,5},
+                        91.5/5/{91,5},92.6/6/{92,6},93.3/7/{93,3},94.5/8/{94,5}} {
+    \edef\temp{\noexpand\node[anchor=west,font=\noexpand\small,text=ink,fill=white,
+      inner sep=1.5pt,xshift=5pt] at (axis cs:\x,\y) {\v};}
+    \temp
+  }
+  \node[anchor=west,font=\bfseries,text=acc,fill=white,inner sep=1.5pt,xshift=6pt]
+    at (axis cs:94.7,9) {94,7};
+  \node[anchor=south west,font=\scriptsize,text=mute,inner sep=1pt] at (axis cs:70.2,4.55) {FUSIONS};
+  \node[anchor=north west,font=\scriptsize,text=mute,inner sep=1pt] at (axis cs:70.2,4.45) {UNE SEULE MODALITÉ};
+\end{axis}
+\end{tikzpicture}
+
+{\scriptsize\color{mute}Moyenne sur 3 graines ; écart-type $\le$ 0,3 point pour toutes les méthodes.}
+\end{frame}
+
+% ========================================================= 6. Sous-ensembles
+\begin{frame}{Sans le nom du plat dans le titre, c'est l'image qui décide}
+\centering
+\begin{tikzpicture}
+\begin{axis}[
+  ybar,bar width=15pt,
+  width=14.2cm,height=6.4cm,
+  ymin=0,ymax=112,
+  axis x line*=bottom,axis y line=none,
+  xtick={1,2,3},
+  xticklabels={{Tout le test},{Jamais vu (61,5\,\%)},{\textbf{Sans le nom du plat (26,4\,\%)}}},
+  x tick label style={font=\small,text=ink,yshift=-1pt},
+  enlarge x limits=0.22,
+  valeurs,
+  legend style={at={(0.5,1.0)},anchor=south,legend columns=-1,draw=none,fill=none,
+    font=\small,text=ink,/tikz/every even column/.append style={column sep=10pt}},
+  area legend,
+]
+  \addplot[fill=txt,draw=none] coordinates {(1,86.4) [{86,4}] (2,82.8) [{82,8}] (3,51.1) [{51,1}]};
+  \addplot[fill=img,draw=none] coordinates {(1,74.4) [{74,4}] (2,75.6) [{75,6}] (3,70.5) [{70,5}]};
+  \addplot[fill=fus!55,draw=none] coordinates {(1,92.6) [{92,6}] (2,91.5) [{91,5}] (3,75.3) [{75,3}]};
+  \addplot[fill=acc,draw=none] coordinates {(1,94.5) [{94,5}] (2,93.4) [{93,4}] (3,82.3) [{82,3}]};
+  \legend{Texte seul (TF-IDF),Image seule,Attention croisée,Tardive (TF-IDF + image)}
+\end{axis}
+\end{tikzpicture}
+
+{\scriptsize\color{mute}Top-1 sur le test (\%), moyenne sur 3 graines.}
+\end{frame}
+
+% ================================================================ 7. Ablations
+\begin{frame}{Privée d'une modalité, seule la fusion tardive tient}
+\centering
+\begin{tikzpicture}
+\begin{axis}[
+  ybar,bar width=19pt,
+  width=11.4cm,height=6.2cm,
+  ymin=0,ymax=112,
+  axis x line*=bottom,axis y line=none,
+  xtick={1,2,3},
+  xticklabels={{Précoce},{Attention croisée},{\textbf{Tardive}}},
+  x tick label style={font=\small,text=ink,yshift=-1pt},
+  enlarge x limits=0.25,
+  valeurs,
+  legend style={at={(0.5,1.0)},anchor=south,legend columns=-1,draw=none,fill=none,
+    font=\small,text=ink,/tikz/every even column/.append style={column sep=10pt}},
+  area legend,
+  clip=false,
+]
+  \addplot[fill=ink!70,draw=none] coordinates {(1,91.5) [{91,5}] (2,92.6) [{92,6}] (3,93.3) [{93,3}]};
+  \addplot[fill=txt,draw=none] coordinates {(1,74.4) [{74,4}] (2,81.6) [{81,6}] (3,82.0) [{82,0}]};
+  \addplot[fill=img,draw=none] coordinates {(1,67.8) [{67,8}] (2,53.6) [{53,6}] (3,73.1) [{73,1}]};
+  \legend{Texte + image,Sans l'image,Sans le texte}
+  \draw[txt,dashed,semithick] ({rel axis cs:0,0}|-{axis cs:1,83.7}) -- ({rel axis cs:1,0}|-{axis cs:1,83.7})
+    node[anchor=west,font=\scriptsize,text=txt] {texte seul 83,7};
+  \draw[img,dashed,semithick] ({rel axis cs:0,0}|-{axis cs:1,74.4}) -- ({rel axis cs:1,0}|-{axis cs:1,74.4})
+    node[anchor=west,font=\scriptsize,text=img] {image seule 74,4};
+\end{axis}
+\end{tikzpicture}
+
+{\scriptsize\color{mute}Au test, la modalité retirée est remplacée par sa moyenne d'entraînement.
+Tardive : BERT gelé + image. Top-1 (\%), 3 graines.\par}
+\end{frame}
+
+% =============================================================== 8. Conclusion
+\begin{frame}{À retenir}
+\renewcommand{\arraystretch}{1.0}
+\vspace{-0.4em}
+\begin{tabular}{@{}r@{\hspace{1.4em}}p{9.6cm}@{}}
+{\fontsize{20}{22}\selectfont\bfseries\color{acc}94,7\,\%} &
+  \textbf{Combiner deux experts bat l'interaction apprise}\newline
+  {\footnotesize\color{mute}contre 92,6\,\% pour l'attention croisée, sur des encodeurs gelés}\\[0.5em]
+{\fontsize{20}{22}\selectfont\bfseries\color{txt}86,5 $\approx$ 86,4} &
+  \textbf{Fine-tuner BERT ne fait pas mieux que TF-IDF}\newline
+  {\footnotesize\color{mute}sur des titres de 7 mots, les mots-clés suffisent}\\[0.5em]
+{\fontsize{20}{22}\selectfont\bfseries\color{img}+31 points} &
+  \textbf{L'image compte quand le titre ne nomme pas le plat}\newline
+  {\footnotesize\color{mute}82,3\,\% avec l'image contre 51,1\,\% pour le texte seul}
+\end{tabular}
+
+\vspace{0.8em}
+\begin{columns}[t,onlytextwidth]
+\begin{column}{0.5\textwidth}
+{\footnotesize\textbf{\color{ink}Limites}\\[2pt]
+\color{mute}Meilleur pas d'apprentissage au bord de la grille.\\
+ViT jamais fine-tuné.\\
+La validation subit la même fuite que le test.}
+\end{column}
+\begin{column}{0.46\textwidth}
+{\footnotesize\textbf{\color{ink}Suite}\\[2pt]
+\color{mute}Masquer une modalité à l'entraînement (\emph{modality dropout}).\\
+Fine-tuner le ViT.}
+\end{column}
+\end{columns}
+\end{frame}
+
+% ===================================================================== Annexes
+\appendix
+
+\begin{frame}{Annexe — tous les résultats (test, top-1 \%)}
+\centering\small
+\begin{tabular}{@{}lccc@{}}
+\toprule
+Méthode & Tout le test & Jamais vu & Sans nom du plat\\
+\midrule
+Image seule, MLP sur ViT gelé & 74,4 $\pm$ 0,1 & 75,6 $\pm$ 0,2 & 70,5 $\pm$ 0,1\\
+Texte seul, MLP sur BERT gelé & 83,7 $\pm$ 0,1 & 79,3 $\pm$ 0,1 & 46,0 $\pm$ 0,5\\
+Texte seul, TF-IDF + régression logistique & 86,4 & 82,8 & 51,1\\
+Texte seul, BERT fine-tuné & 86,5 $\pm$ 0,3 & — & —\\
+\midrule
+Fusion précoce & 91,5 $\pm$ 0,1 & — & —\\
+Attention croisée & 92,6 $\pm$ 0,2 & 91,5 $\pm$ 0,2 & 75,3 $\pm$ 0,5\\
+Tardive, somme brute des logits (BERT gelé) & 93,4 $\pm$ 0,1 & 91,9 $\pm$ 0,1 & 80,1 $\pm$ 0,1\\
+Tardive calibrée, BERT gelé + image & 93,3 $\pm$ 0,1 & 91,9 $\pm$ 0,2 & 80,2 $\pm$ 0,4\\
+Tardive calibrée, TF-IDF + image & 94,5 $\pm$ 0,0 & 93,4 $\pm$ 0,0 & 82,3 $\pm$ 0,3\\
+Tardive calibrée, BERT fine-tuné + image & \textbf{94,7 $\pm$ 0,0} & — & —\\
+\bottomrule
+\end{tabular}
+
+\vspace{0.6em}
+{\scriptsize\color{mute}Moyenne $\pm$ écart-type sur 3 graines. TF-IDF est déterministe.
+« — » : non calculé sur ce sous-ensemble.}
+\end{frame}
+
+\begin{frame}{Annexe — ablations complètes (test, top-1 \%)}
+\centering\small
+\begin{tabular}{@{}lccccc@{}}
+\toprule
+Condition au test & Précoce & Croisée & Tardive & Tardive & Tardive\\
+ & & & BERT gelé & TF-IDF & BERT fine-tuné\\
+\midrule
+Texte + image & 91,5 & 92,6 & 93,3 & 94,5 & 94,7\\
+Image remplacée par la moyenne & 74,4 & 81,6 & 82,0 & 85,8 & 86,1\\
+Image mélangée entre exemples & 37,8 & 73,5 & 56,6 & 60,0 & 59,0\\
+Texte remplacé par la moyenne & 67,8 & 53,6 & 73,1 & — & —\\
+Texte mélangé entre exemples & 40,3 & 14,5 & 29,5 & 32,1 & 34,1\\
+\bottomrule
+\end{tabular}
+
+\vspace{0.8em}
+{\footnotesize\color{mute}Une modalité seule : texte 83,7 (BERT gelé), 86,4 (TF-IDF), 86,5 (BERT fine-tuné) ; image 74,4.\\
+La fusion est ajustée une seule fois sur la validation complète, puis figée pour les ablations.}
+\end{frame}
+
+\begin{frame}{Annexe — réglages}
+\small
+\begin{tabular}{@{}p{4.1cm}p{9.6cm}@{}}
+\toprule
+Encodeurs & BERT-base-uncased (titres coupés à 40 jetons) ; ViT-B/16 SWAG, 384 px\\
+Têtes sur vecteurs gelés & AdamW, lots de 256, 50 époques au plus, arrêt sur la perte de validation (patience 5)\\
+Grille commune & pas $\in\{3\cdot10^{-4}, 10^{-3}, 3\cdot10^{-3}\}$ $\times$ \emph{weight decay} $\in\{10^{-4}, 10^{-2}\}$, graine 0\\
+Pas retenu & $3\cdot10^{-4}$ pour les quatre têtes : le bord bas de la grille\\
+TF-IDF & $C\in\{1, 10, 100\}$, retenu $C=10$\\
+BERT fine-tuné & recette de l'article BERT : pas $\in\{2, 3, 5\}\cdot10^{-5}$ (retenu $5\cdot10^{-5}$), 4 époques, échauffement 10\,\%\\
+Fusion tardive & températures et poids $\alpha$ choisis sur la validation, aucun entraînement\\
+\bottomrule
+\end{tabular}
+\end{frame}
+
+\end{document}

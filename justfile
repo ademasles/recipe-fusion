@@ -32,6 +32,10 @@ extract-text *overrides:
 # All checks run before a commit or a PR
 check: lint typecheck test
 
+# README figures from outputs/results/test_summary.csv (matplotlib is not a project dependency)
+plot-results *ARGS:
+    uv run --with matplotlib python scripts/plot_results.py {{ARGS}}
+
 # GPU availability + micro-benchmark
 gpu:
     uv run python scripts/gpu_check.py
