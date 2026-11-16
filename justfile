@@ -84,3 +84,7 @@ train-late-fusion *ARGS:
 # and `lr=... weight_decay=...` shortcut as train-cross-attention
 train-early-fusion *ARGS:
     uv run python -m recipe_fusion.models.early_fusion {{ARGS}}
+
+# Fine-tuned BERT text reference (sheet B4, BERT paper recipe); `lr=0.00003` skips the lr search
+train-bert-finetune *ARGS:
+    uv run python -m recipe_fusion.models.bert_finetune {{ARGS}}

@@ -34,6 +34,7 @@ just train-late-fusion      # calibrated late fusion of the text and image MLPs
 just train-tfidf   # text baseline: TF-IDF + logistic regression
 just train-text-mlp # text baseline: MLP on frozen BERT
 just train-early-fusion     # early fusion of BERT + ViT, with the ablations
+just train-bert-finetune    # text reference: fully fine-tuned BERT (needs a GPU)
 uv run pre-commit install   # once after cloning
 ```
 
