@@ -1,0 +1,32 @@
+# @package _global_
+defaults:
+  - /paths: default
+  - _self_
+
+method: text_bert_ft
+condition: text_only
+device: auto
+model_name: bert-base-uncased
+text_features: ${paths.features_dir}/text/bert-base-uncased  # only to read L and the preprocessing
+max_len: null  # null = L of the B1 text cache
+val_ids: splits/val_ids.txt
+outputs_dir: outputs
+seeds: [0, 1, 2]
+lr: null  # set it to skip the search: `just train-bert-finetune lr=0.00003`
+
+search:
+  seed: 0
+  lr: [0.00002, 0.00003, 0.00005]
+
+# BERT paper recipe (Devlin et al., 2019, appendix A.3); an assumed exception to protocol 2.4
+recipe:
+  weight_decay: 0.01  # not applied to biases and LayerNorm
+  warmup_frac: 0.1
+  batch_size: 32
+  max_epochs: 4
+  patience: 2
+  dropout: 0.1
+
+hydra:
+  run:
+    dir: outputs/bert_finetune/${now:%Y-%m-%d}/${now:%H-%M-%S}

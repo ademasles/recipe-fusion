@@ -35,6 +35,7 @@ just train-tfidf   # text baseline: TF-IDF + logistic regression
 just train-text-mlp # text baseline: MLP on frozen BERT
 just train-early-fusion     # early fusion of BERT + ViT, with the ablations
 uv run pre-commit install   # once after cloning
+just train-bert-finetune    # text reference: fully fine-tuned BERT (needs a GPU)
 ```
 
 To explore the text alone, `just download data.texts_only=true` fetches the two title files

@@ -121,15 +121,23 @@ def fit(
     cfg: TrainConfig,
     device: torch.device,
     seed: int,
+    *,
+    optimizer: torch.optim.Optimizer | None = None,
+    scheduler: torch.optim.lr_scheduler.LRScheduler | None = None,
 ) -> FitResult:
     """Train with protocol 2.4 and leave ``model`` at its best validation epoch.
+
+    By default: AdamW(``cfg.lr``, ``cfg.weight_decay``) with a constant learning rate. Another
+    recipe (BERT fine-tuning) passes its own ``optimizer`` and a ``scheduler``, stepped after
+    every batch; ``cfg.lr`` and ``cfg.weight_decay`` are then ignored.
 
     Call ``seed_everything(seed)`` before building ``model``.
     """
     if cfg.max_epochs < 1:
         raise ValueError("max_epochs must be >= 1")
     model.to(device)
-    optimizer = torch.optim.AdamW(model.parameters(), lr=cfg.lr, weight_decay=cfg.weight_decay)
+    if optimizer is None:
+        optimizer = torch.optim.AdamW(model.parameters(), lr=cfg.lr, weight_decay=cfg.weight_decay)
     rng = np.random.default_rng(seed)
     labels = torch.from_numpy(train_labels)
     best_loss, best_state, best = math.inf, copy.deepcopy(model.state_dict()), None
@@ -146,6 +154,8 @@ def fit(
             optimizer.zero_grad(set_to_none=True)
             loss.backward()
             optimizer.step()
+            if scheduler is not None:
+                scheduler.step()
             total += loss.item() * len(rows)
             count += len(rows)
         val_loss, val_top1 = _evaluate(model, val, val_labels, device)
