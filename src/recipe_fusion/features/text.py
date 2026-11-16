@@ -34,6 +34,9 @@ SPLITS = ("train", "test")  # train first, then test; file order, no shuffling
 _RESIDUAL = re.compile(r"&#?\w+;|\\x[0-9a-fA-F]{2}")
 
 
+PREPROCESSING = "recipe_fusion.data.clean.clean_title"  # recorded in meta.json, checked by B4
+
+
 def preprocess(title: str) -> str:
     """The shared title cleaning; every text model must use the same one."""
     return clean_title(title)
@@ -155,7 +158,7 @@ def run(
         "L": max_len,
         "length_percentile": pct,
         "train_length_at_percentile": p_val,
-        "preprocessing": "recipe_fusion.data.clean.clean_title",
+        "preprocessing": PREPROCESSING,
         "pooling": "masked mean of last_hidden_state, [CLS]/[SEP] included",
         "batch_size": batch_size,
         "dtype": "float16",

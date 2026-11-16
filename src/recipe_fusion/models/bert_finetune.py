@@ -34,15 +34,19 @@ from transformers import AutoTokenizer, BertModel
 from recipe_fusion.data.loading import Splits, load_splits
 from recipe_fusion.data.upmc import Sample
 from recipe_fusion.features.cache import labels_for, read_features
-from recipe_fusion.features.text import git_commit, masked_mean, preprocess, resolve_revision
+from recipe_fusion.features.text import (
+    PREPROCESSING,
+    git_commit,
+    masked_mean,
+    preprocess,
+    resolve_revision,
+)
 from recipe_fusion.models.pooled_mlp import best_config
 from recipe_fusion.preds import ckpt_path, preds_path, write_preds
 from recipe_fusion.seed import pick_device, seed_everything
 from recipe_fusion.training import FitResult, TrainConfig, fit, predict
 
 log = logging.getLogger(__name__)
-
-PREPROCESSING = "html.unescape(title).strip()"  # what features.text.preprocess does
 
 
 class BertClassifier(nn.Module):
