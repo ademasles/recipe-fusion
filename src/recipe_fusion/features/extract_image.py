@@ -55,6 +55,17 @@ class ImageDataset(Dataset[Tensor]):
                 rgb_image.close()
 
 
+def to_grid(sequence: Tensor) -> npt.NDArray[np.float16]:
+    """Encoder output (N, 577, 768) -> 8x8 average-pooled patch grid (N, 64, 768), float16."""
+    if sequence.ndim != 3 or sequence.shape[1:] != (PATCH_GRID_SIZE**2 + 1, FEATURE_DIM):
+        raise ValueError(f"expected encoder output (N, 577, 768), got {tuple(sequence.shape)}")
+    patches = sequence[:, 1:, :].permute(0, 2, 1)
+    patches = patches.reshape(-1, FEATURE_DIM, PATCH_GRID_SIZE, PATCH_GRID_SIZE)
+    grid = functional.avg_pool2d(patches, kernel_size=3, stride=3)
+    grid = grid.permute(0, 2, 3, 1).reshape(-1, TOKENS_PER_IMAGE, FEATURE_DIM)
+    return grid.to(dtype=torch.float16, device="cpu").numpy()
+
+
 class GridWriter:
     def __init__(self, path: Path, sample_count: int) -> None:
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -69,14 +80,7 @@ class GridWriter:
         self.offset = 0
 
     def __call__(self, sequence: Tensor) -> None:
-        if sequence.ndim != 3 or sequence.shape[1:] != (PATCH_GRID_SIZE**2 + 1, FEATURE_DIM):
-            raise ValueError(f"expected encoder output (N, 577, 768), got {tuple(sequence.shape)}")
-
-        patches = sequence[:, 1:, :].permute(0, 2, 1)
-        patches = patches.reshape(-1, FEATURE_DIM, PATCH_GRID_SIZE, PATCH_GRID_SIZE)
-        grid = functional.avg_pool2d(patches, kernel_size=3, stride=3)
-        grid = grid.permute(0, 2, 3, 1).reshape(-1, TOKENS_PER_IMAGE, FEATURE_DIM)
-        values = grid.to(dtype=torch.float16, device="cpu").numpy()
+        values = to_grid(sequence)
         end = self.offset + len(values)
         if end > len(self.array):
             raise ValueError("encoder produced more images than the dataset contains")
