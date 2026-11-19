@@ -108,6 +108,9 @@ just evaluate split=test    # outputs/results/test_summary.csv
 just plot-results           # the two figures above
 ```
 
+[notebooks/live_demo.ipynb](notebooks/live_demo.ipynb) runs the best model live on a test pair
+(register the kernel once with `just kernel`).
+
 The validation split and the evaluation subsets are committed, so `make-split` and
 `make-subsets` only need to be rerun to check them. `just evaluate` alone scores the validation
 split, which is what every choice was made on.
@@ -134,6 +137,7 @@ uv tool install rust-just                         # just, distributed through uv
 | `src/recipe_fusion/models/` | Baselines, fine-tuned BERT, early, cross-attention and late fusion |
 | `src/recipe_fusion/training.py` | Shared training loop, search and early stopping |
 | `src/recipe_fusion/evaluate.py` | The single evaluation script |
+| `src/recipe_fusion/demo.py`, `notebooks/` | Live prediction of the best model on one pair |
 | `configs/` | Hydra configuration, one file per model under `configs/train/` |
 | `splits/` | Validation ids and evaluation subsets |
 | `scripts/` | GPU check, README figures |
